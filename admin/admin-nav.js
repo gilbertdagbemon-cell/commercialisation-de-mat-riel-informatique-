@@ -15,6 +15,16 @@ async function addTeamLink() {
   } catch (_) {}
 }
 
+function addFaqLink() {
+  const nav = side?.querySelector('.admin-nav');
+  if (!nav || nav.querySelector('[data-faq-link]')) return;
+  const link = document.createElement('a');
+  link.href = 'faq.html'; link.dataset.faqLink = '1';
+  link.innerHTML = "<i class='bx bx-help-circle'></i> FAQ";
+  if (location.pathname.endsWith('/faq.html') || location.pathname.endsWith('\\faq.html')) link.classList.add('active');
+  nav.appendChild(link);
+}
+
 if (shell && side) {
   const toggle = document.createElement('button');
   toggle.type = 'button'; toggle.className = 'admin-menu-toggle'; toggle.setAttribute('aria-label','Ouvrir le menu'); toggle.setAttribute('aria-expanded','false'); toggle.innerHTML="<i class='bx bx-menu'></i>";
@@ -23,5 +33,6 @@ if (shell && side) {
   toggle.addEventListener('click',()=>{const open=shell.classList.toggle('menu-open');toggle.setAttribute('aria-expanded',String(open));toggle.setAttribute('aria-label',open?'Fermer le menu':'Ouvrir le menu');toggle.innerHTML=open?"<i class='bx bx-x'></i>":"<i class='bx bx-menu'></i>"});
   side.querySelectorAll('a').forEach(a=>a.addEventListener('click',close));
   document.addEventListener('click',e=>{if(shell.classList.contains('menu-open')&&!side.contains(e.target)&&e.target!==toggle)close()});
+  addFaqLink();
   addTeamLink();
 }

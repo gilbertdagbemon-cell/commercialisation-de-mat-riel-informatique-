@@ -110,7 +110,10 @@ async function loadProducts() {
     const term = ilikeTerm(search);
     const brandIds = matchingIds(brands, search);
     const categoryIds = matchingIds(categories, search);
-    const clauses = [`title.ilike.%${term}%`];
+    const clauses = [
+      `title.ilike.%${term}%`,
+      `description.ilike.%${term}%`,
+    ];
     if (brandIds.length) clauses.push(`brand_id.in.(${brandIds.join(',')})`);
     if (categoryIds.length) clauses.push(`category_id.in.(${categoryIds.join(',')})`);
     query = query.or(clauses.join(','));
@@ -123,6 +126,12 @@ async function loadProducts() {
   const { data, error, count } = await query.range(from, to);
   if (error) throw error;
   totalResults = count || 0;
+  const totalPages = Math.max(1, Math.ceil(totalResults / PAGE_SIZE));
+  if (currentPage > totalPages) {
+    currentPage = totalPages;
+    syncUrl(true);
+    return loadProducts();
+  }
   const countEl = document.getElementById('catalog-result-count');
   if (countEl) countEl.textContent = `${totalResults} produit${totalResults > 1 ? 's' : ''}`;
   const empty = document.getElementById('catalog-empty');
@@ -133,15 +142,42 @@ async function loadProducts() {
   if (errorEl) errorEl.hidden = true;
 }
 
-function renderFavorites() {
+async function renderFavorites() {
   const body = document.getElementById('favorites-body');
   if (!body) return;
-  const ids = getFavoriteIds();
-  // Favorites on a paginated catalogue are hydrated from the current page only; the modal remains local to loaded products.
-  const cards = [...document.querySelectorAll('#catalog-products [data-product-id]')];
-  const favorites = cards.filter(card => ids.includes(card.dataset.productId));
-  if (!favorites.length) { body.innerHTML = '<p>Aucun favori visible sur cette page pour le moment.</p>'; return; }
-  body.innerHTML = favorites.map(card => `<div class="favorite-item"><strong>${escapeHtml(card.querySelector('.card-title')?.textContent || 'Produit')}</strong><span>${escapeHtml(card.querySelector('.card-brand')?.textContent || 'Autre')} · ${escapeHtml(card.querySelector('.card-price')?.textContent || '')}</span></div>`).join('');
+  const ids = getFavoriteIds().map(String).filter(Boolean);
+  if (!ids.length) {
+    body.innerHTML = '<p>Aucun favori enregistré pour le moment.</p>';
+    return;
+  }
+
+  body.innerHTML = '<p>Chargement de vos favoris…</p>';
+  try {
+    const { data, error } = await supabase
+      .from('products')
+      .select('id,title,price,stock,brands(name)')
+      .in('id', ids)
+      .eq('is_published', true);
+    if (error) throw error;
+
+    const productsById = new Map((data || []).map(product => [String(product.id), product]));
+    const ordered = ids.map(id => productsById.get(id)).filter(Boolean);
+
+    if (!ordered.length) {
+      body.innerHTML = '<p>Vos favoris ne sont plus disponibles.</p>';
+      return;
+    }
+
+    body.innerHTML = ordered.map(product => `
+      <div class="favorite-item">
+        <strong>${escapeHtml(product.title || 'Produit')}</strong>
+        <span>${escapeHtml(product.brands?.name || 'Autre')} · ${escapeHtml(formatPriceFCFA(product.price))}</span>
+      </div>
+    `).join('');
+  } catch (error) {
+    console.error('Favoris:', error);
+    body.innerHTML = '<p>Impossible de charger vos favoris pour le moment.</p>';
+  }
 }
 
 function setupFavorites() {
@@ -149,7 +185,7 @@ function setupFavorites() {
   const modal = document.getElementById('favorites-modal');
   const close = document.querySelector('.close-favorites');
   if (!toggle || !modal || !close) return;
-  toggle.addEventListener('click', event => { event.preventDefault(); renderFavorites(); modal.classList.add('active'); });
+  toggle.addEventListener('click', async event => { event.preventDefault(); modal.classList.add('active'); await renderFavorites(); });
   close.addEventListener('click', () => modal.classList.remove('active'));
   modal.addEventListener('click', event => { if (event.target === modal) modal.classList.remove('active'); });
   document.addEventListener('ordimarket:favorites-changed', renderFavorites);

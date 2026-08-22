@@ -82,6 +82,49 @@ export async function countActiveSubscribers() {
   return count || 0;
 }
 
+export async function listFaqsAdmin() {
+  return throwIfError(await supabase
+    .from('faqs')
+    .select('id,question,answer,display_order,is_active,created_at')
+    .order('display_order', { ascending: true })
+    .order('created_at', { ascending: true })) || [];
+}
+
+export async function createFaq(payload) {
+  const question = String(payload?.question ?? '').trim();
+  const answer = String(payload?.answer ?? '').trim();
+  if (!question || !answer) throw new Error('La question et la réponse sont obligatoires.');
+  return throwIfError(await supabase.from('faqs').insert({
+    question,
+    answer,
+    display_order: Number.isFinite(Number(payload?.display_order)) ? Number(payload.display_order) : 0,
+    is_active: payload?.is_active !== false,
+  }).select().single());
+}
+
+export async function updateFaq(id, payload) {
+  const question = String(payload?.question ?? '').trim();
+  const answer = String(payload?.answer ?? '').trim();
+  if (!id || !question || !answer) throw new Error('La question et la réponse sont obligatoires.');
+  return throwIfError(await supabase.from('faqs').update({
+    question,
+    answer,
+    display_order: Number.isFinite(Number(payload?.display_order)) ? Number(payload.display_order) : 0,
+    is_active: payload?.is_active !== false,
+  }).eq('id', id).select().single());
+}
+
+export async function deleteFaq(id) {
+  if (!id) throw new Error('FAQ invalide.');
+  return throwIfError(await supabase.from('faqs').delete().eq('id', id).select('id').single());
+}
+
+export async function deactivateSubscriber(id, admin) {
+  if (admin?.role !== 'super_admin') throw new Error('Action réservée au super administrateur.');
+  if (!id) throw new Error('Abonné invalide.');
+  return throwIfError(await supabase.from('subscribers').update({ is_active: false }).eq('id', id).eq('is_active', true).select('id,email,is_active').single());
+}
+
 export async function listAdmins() {
   return throwIfError(await supabase.from('admins').select('id,auth_user_id,email,full_name,role,is_active').order('full_name')) || [];
 }

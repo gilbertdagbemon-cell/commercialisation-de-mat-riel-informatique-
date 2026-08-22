@@ -31,36 +31,51 @@
     </div>
     <div class="card">
       <table>
-        <thead><tr><th>Email</th><th>Inscrit le</th><th>Statut</th></tr></thead>
-        <tbody id="rows"><tr><td colspan="3" style="text-align:center;color:var(--ink-400);padding:30px;">Chargement…</td></tr></tbody>
+        <thead><tr><th>Email</th><th>Inscrit le</th><th>Statut</th><th>Action</th></tr></thead>
+        <tbody id="rows"><tr><td colspan="4" style="text-align:center;color:var(--ink-400);padding:30px;">Chargement…</td></tr></tbody>
       </table>
     </div>
   </main>
 </div>
 
 <script type="module">
-import { requireAdmin, supabase } from './supabase-client.js';
-import { escapeHtml, bindSignOut } from './admin-shared.js';
+import { requireAdmin, supabase, deactivateSubscriber } from './supabase-client.js';
+import { escapeHtml, showToast, bindSignOut } from './admin-shared.js';
+
+let currentAdmin = null;
+
+async function load() {
+  const rows = document.getElementById('rows');
+  const { data, error } = await supabase.from('subscribers').select('id,email,created_at,is_active').order('created_at', { ascending: false });
+  if (error) { rows.innerHTML = `<tr><td colspan="4">Erreur de chargement : ${escapeHtml(error.message)}</td></tr>`; return; }
+  document.getElementById('count').textContent = `${data.length} abonné(s)`;
+  if (!data.length) { rows.innerHTML = `<tr><td colspan="4" style="text-align:center;color:var(--ink-400);padding:30px;">Aucun abonné pour l'instant.</td></tr>`; return; }
+  rows.innerHTML = data.map(s => `
+    <tr>
+      <td data-label="Email">${escapeHtml(s.email)}</td>
+      <td data-label="Inscrit le">${new Date(s.created_at).toLocaleDateString('fr-FR')}</td>
+      <td data-label="Statut">${s.is_active ? '<span class="badge ok">Actif</span>' : '<span class="badge off">Désabonné</span>'}</td>
+      <td data-label="Action">${currentAdmin?.role === 'super_admin' && s.is_active ? `<button type="button" class="btn btn-danger btn-sm" data-unsubscribe="${s.id}">Désabonner</button>` : '<span style="color:var(--ink-400);font-size:12px;">—</span>'}</td>
+    </tr>`).join('');
+  rows.querySelectorAll('[data-unsubscribe]').forEach(button => button.addEventListener('click', async () => {
+    const id = button.dataset.unsubscribe;
+    const subscriber = data.find(item => item.id === id);
+    if (!subscriber || currentAdmin?.role !== 'super_admin') { showToast('Action réservée au super administrateur.', true); return; }
+    if (!window.confirm(`Désabonner ${subscriber.email} de la newsletter ?`)) return;
+    button.disabled = true;
+    try {
+      await deactivateSubscriber(id, currentAdmin);
+      showToast('Abonné désabonné avec succès.');
+      await load();
+    } catch (e) { button.disabled = false; showToast(e.message || 'Impossible de désabonner cet abonné.', true); }
+  }));
+}
 
 async function init() {
-  const admin = await requireAdmin();
-  if (!admin) return;
+  currentAdmin = await requireAdmin();
+  if (!currentAdmin) return;
   bindSignOut();
-
-  const { data, error } = await supabase.from('subscribers').select('email,created_at,is_active').order('created_at', { ascending: false });
-  const rows = document.getElementById('rows');
-  if (error) { rows.innerHTML = `<tr><td colspan="3">Erreur de chargement.</td></tr>`; return; }
-  document.getElementById('count').textContent = `${data.length} abonné(s)`;
-  if (!data.length) {
-    rows.innerHTML = `<tr><td colspan="3" style="text-align:center;color:var(--ink-400);padding:30px;">Aucun abonné pour l'instant.</td></tr>`;
-    return;
-  }
-  rows.innerHTML = data.map((s) => `
-    <tr>
-      <td>${escapeHtml(s.email)}</td>
-      <td>${new Date(s.created_at).toLocaleDateString('fr-FR')}</td>
-      <td>${s.is_active ? '<span class="badge ok">Actif</span>' : '<span class="badge off">Désabonné</span>'}</td>
-    </tr>`).join('');
+  await load();
 }
 init();
 </script>
