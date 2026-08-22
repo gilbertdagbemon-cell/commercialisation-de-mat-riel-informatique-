@@ -1,0 +1,2 @@
+[functions.notify-new-product]
+verify_jwt = false

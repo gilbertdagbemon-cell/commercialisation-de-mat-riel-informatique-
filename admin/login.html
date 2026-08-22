@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Connexion admin — OrdiMarket</title>
+
+  <meta
+    name="description"
+    content="Connexion sécurisée à l'espace administrateur OrdiMarket."
+  >
+
+  <link
+    href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700&family=Inter:wght@400;500;600&display=swap"
+    rel="stylesheet"
+  >
+
+  <link rel="preconnect" href="https://unpkg.com" crossorigin>
+  <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="admin.css">
+</head>
+
+<body>
+
+  <main class="login-shell">
+
+    <form
+      class="login-card"
+      id="login-form"
+      novalidate
+    >
+
+      <img
+        src="../ordimarket-logo.png"
+        alt="OrdiMarket"
+        width="180"
+        height="auto"
+      >
+
+      <h2>Espace administrateur</h2>
+
+      <p>
+        Connectez-vous pour gérer le catalogue OrdiMarket.
+      </p>
+
+      <div class="form-row">
+
+        <label for="email">
+          Email
+        </label>
+
+        <input
+          id="email"
+          name="email"
+          type="email"
+          required
+          autocomplete="username"
+          inputmode="email"
+          maxlength="254"
+        >
+
+      </div>
+
+      <div class="form-row">
+
+        <label for="password">
+          Mot de passe
+        </label>
+
+        <div class="password-field">
+          <input
+            id="password"
+            name="password"
+            type="password"
+            required
+            autocomplete="current-password"
+            maxlength="128"
+          >
+          <button
+            type="button"
+            class="password-toggle"
+            id="password-toggle"
+            aria-label="Afficher le mot de passe"
+            aria-pressed="false"
+          >
+            <i class="bx bx-show" aria-hidden="true"></i>
+          </button>
+        </div>
+
+      </div>
+
+      <button
+        class="btn btn-primary"
+        id="login-button"
+        type="submit"
+        style="width:100%;justify-content:center;"
+      >
+        Se connecter
+      </button>
+
+      <p
+        class="login-error"
+        id="login-error"
+        role="alert"
+        aria-live="polite"
+        hidden
+      >
+        Email ou mot de passe incorrect.
+      </p>
+
+    </form>
+
+  </main>
+
+  <script type="module">
+
+    import {
+      signIn,
+      getCurrentAdmin
+    } from './supabase-client.js';
+
+
+    const form =
+      document.getElementById('login-form');
+
+    const emailInput =
+      document.getElementById('email');
+
+    const passwordInput =
+      document.getElementById('password');
+
+    const passwordToggle =
+      document.getElementById('password-toggle');
+
+    passwordToggle.addEventListener('click', () => {
+      const visible = passwordInput.type === 'text';
+      passwordInput.type = visible ? 'password' : 'text';
+      passwordToggle.setAttribute('aria-label', visible ? 'Afficher le mot de passe' : 'Masquer le mot de passe');
+      passwordToggle.setAttribute('aria-pressed', String(!visible));
+      passwordToggle.innerHTML = `<i class="bx ${visible ? 'bx-show' : 'bx-hide'}" aria-hidden="true"></i>`;
+    });
+
+    const submitBtn =
+      document.getElementById('login-button');
+
+    const errorBox =
+      document.getElementById('login-error');
+
+
+    /*
+     * Vérifie si une session administrateur
+     * existe déjà.
+     */
+    async function redirectIfAlreadyAuthenticated() {
+
+      try {
+
+        const admin =
+          await getCurrentAdmin();
+
+        if (admin) {
+          window.location.replace(
+            'dashboard.html'
+          );
+        }
+
+      } catch (error) {
+
+        /*
+         * Une erreur ici ne doit pas empêcher
+         * l'affichage de la page de connexion.
+         */
+        console.error(
+          'Vérification session admin :',
+          error
+        );
+
+      }
+
+    }
+
+
+    redirectIfAlreadyAuthenticated();
+
+
+    /*
+     * Connexion administrateur.
+     */
+    form.addEventListener(
+      'submit',
+      async (event) => {
+
+        event.preventDefault();
+
+        errorBox.hidden = true;
+        errorBox.textContent = '';
+
+        const email =
+          emailInput.value.trim();
+
+        const password =
+          passwordInput.value;
+
+
+        /*
+         * Validation minimale côté client.
+         */
+        if (!email || !password) {
+
+          errorBox.textContent =
+            'Veuillez renseigner votre email et votre mot de passe.';
+
+          errorBox.hidden = false;
+
+          return;
+        }
+
+
+        if (!emailInput.validity.valid) {
+
+          errorBox.textContent =
+            'Veuillez saisir une adresse email valide.';
+
+          errorBox.hidden = false;
+
+          emailInput.focus();
+
+          return;
+        }
+
+
+        submitBtn.disabled = true;
+        submitBtn.setAttribute(
+          'aria-busy',
+          'true'
+        );
+
+        submitBtn.textContent =
+          'Connexion...';
+
+
+        try {
+
+          /*
+           * Authentification Supabase.
+           */
+          await signIn(
+            email,
+            password
+          );
+
+
+          /*
+           * Vérification supplémentaire :
+           * l'utilisateur authentifié doit
+           * également exister dans admins.
+           */
+          const admin =
+            await getCurrentAdmin();
+
+
+          if (!admin) {
+
+            errorBox.textContent =
+              'Ce compte ne dispose pas des autorisations administrateur.';
+
+            errorBox.hidden = false;
+
+            return;
+          }
+
+
+          /*
+           * replace() empêche de revenir
+           * inutilement sur la page login
+           * avec le bouton précédent.
+           */
+          window.location.replace(
+            'dashboard.html'
+          );
+
+
+        } catch (error) {
+
+          console.error(
+            'Connexion administrateur :',
+            error
+          );
+
+
+          /*
+           * Ne pas exposer error.message
+           * directement à l'utilisateur.
+           */
+          errorBox.textContent =
+            'Connexion impossible. Vérifiez vos identifiants ou réessayez plus tard.';
+
+          errorBox.hidden = false;
+
+
+        } finally {
+
+          submitBtn.disabled = false;
+
+          submitBtn.removeAttribute(
+            'aria-busy'
+          );
+
+          submitBtn.textContent =
+            'Se connecter';
+
+        }
+
+      }
+    );
+
+  </script>
+
+</body>
+</html>

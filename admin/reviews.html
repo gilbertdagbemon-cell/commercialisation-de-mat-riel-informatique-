@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Avis clients — Back-office OrdiMarket</title>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://unpkg.com" crossorigin>
+<link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+<link rel="stylesheet" href="admin.css">
+</head>
+<body>
+<div class="admin-shell">
+  <aside class="admin-side" style="display:flex;flex-direction:column;">
+    <div class="brand"><img src="../ordimarket-logo.png" alt="OrdiMarket"></div>
+    <nav class="admin-nav">
+      <a href="dashboard.html"><i class='bx bx-laptop'></i> Produits</a>
+      <a href="testimonials.html"><i class='bx bx-message-square-dots'></i> Témoignages</a>
+      <a href="profile.html"><i class='bx bx-user-circle'></i> Mon profil</a>
+      <a href="subscribers.html"><i class='bx bx-envelope'></i> Abonnés newsletter</a>
+      <a href="reviews.html" class="active"><i class='bx bx-star'></i> Avis clients</a>
+    </nav>
+    <div class="signout"><a href="#" id="signout-link" style="display:flex;align-items:center;gap:8px;font-size:13.5px;"><i class='bx bx-log-out'></i> Déconnexion</a></div>
+  </aside>
+  <main class="admin-main">
+    <div class="admin-topbar"><div><h1>Avis clients</h1><p class="who">Validation des avis déposés sur les produits</p></div></div>
+    <div class="card"><div class="table-wrap"><table>
+      <thead><tr><th>Produit concerné</th><th>Auteur</th><th>Note</th><th>Avis</th><th>Statut</th><th>Actions</th></tr></thead>
+      <tbody id="review-rows"><tr><td colspan="6" style="text-align:center;color:var(--ink-400);padding:30px;">Chargement…</td></tr></tbody>
+    </table></div></div>
+  </main>
+</div>
+<div class="toast" id="toast"></div>
+<script type="module">
+import { requireAdmin, listProductReviews, publishReview, unpublishReview, deleteReview } from './supabase-client.js';
+import { escapeHtml, showToast, bindSignOut } from './admin-shared.js';
+
+let reviews = [];
+const rows = document.getElementById('review-rows');
+
+function stars(rating) {
+  const value = Math.max(0, Math.min(5, Number(rating) || 0));
+  return `${'★'.repeat(value)}${'☆'.repeat(5 - value)}`;
+}
+
+function render() {
+  const items = [...reviews].sort((a,b) => Number(Boolean(a.is_published)) - Number(Boolean(b.is_published)) || new Date(b.created_at) - new Date(a.created_at));
+  if (!items.length) {
+    rows.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--ink-400);padding:30px;">Aucun avis pour le moment.</td></tr>';
+    return;
+  }
+  rows.innerHTML = items.map(r => {
+    const comment = String(r.comment || '');
+    return `<tr>
+      <td data-label="Produit concerné"><b>${escapeHtml(r.products?.title || 'Produit supprimé')}</b></td>
+      <td data-label="Auteur">${escapeHtml(r.author_name || 'Anonyme')}</td>
+      <td data-label="Note" aria-label="${Number(r.rating) || 0} sur 5">${stars(r.rating)}</td>
+      <td data-label="Avis" style="max-width:280px;">${escapeHtml(comment.slice(0,70))}${comment.length > 70 ? '…' : ''}</td>
+      <td data-label="Statut">${r.is_published ? '<span class="badge ok">Publié</span>' : '<span class="badge off">En attente</span>'}</td>
+      <td data-label="Actions" class="action-row">
+        ${r.is_published ? `<button type="button" class="btn btn-secondary btn-sm" data-unpublish="${escapeHtml(r.id)}">Dépublier</button>` : `<button type="button" class="btn btn-primary btn-sm" data-publish="${escapeHtml(r.id)}">Publier</button>`}
+        <button type="button" class="btn btn-danger btn-sm" data-delete="${escapeHtml(r.id)}">Supprimer</button>
+      </td>
+    </tr>`;
+  }).join('');
+  bindActions();
+}
+
+function bindActions() {
+  rows.querySelectorAll('[data-publish]').forEach(btn => btn.addEventListener('click', async () => {
+    try { await publishReview(btn.dataset.publish); const r=reviews.find(x=>x.id===btn.dataset.publish); if(r) r.is_published=true; render(); showToast('Avis publié.'); }
+    catch(e) { showToast(e.message || 'Impossible de publier l’avis.', true); }
+  }));
+  rows.querySelectorAll('[data-unpublish]').forEach(btn => btn.addEventListener('click', async () => {
+    try { await unpublishReview(btn.dataset.unpublish); const r=reviews.find(x=>x.id===btn.dataset.unpublish); if(r) r.is_published=false; render(); showToast('Avis dépublié.'); }
+    catch(e) { showToast(e.message || 'Impossible de dépublier l’avis.', true); }
+  }));
+  rows.querySelectorAll('[data-delete]').forEach(btn => btn.addEventListener('click', async () => {
+    if (!confirm('Supprimer définitivement cet avis ?')) return;
+    try { await deleteReview(btn.dataset.delete); reviews=reviews.filter(x=>x.id!==btn.dataset.delete); render(); showToast('Avis supprimé.'); }
+    catch(e) { showToast(e.message || 'Impossible de supprimer l’avis.', true); }
+  }));
+}
+
+async function init() {
+  const admin = await requireAdmin();
+  if (!admin) return;
+  bindSignOut();
+  try { reviews = await listProductReviews(); render(); }
+  catch(e) { rows.innerHTML='<tr><td colspan="6" style="text-align:center;padding:30px;">Impossible de charger les avis.</td></tr>'; showToast(e.message || 'Erreur de chargement.', true); }
+}
+init();
+</script>
+<script type="module" src="admin-nav.js"></script>
+</body>
+</html>

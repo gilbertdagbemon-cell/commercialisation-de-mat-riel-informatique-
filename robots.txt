@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+
+Sitemap: https://gilbertdagbemon-cell.github.io/commercialisation-de-mat-riel-informatique-/sitemap.xml

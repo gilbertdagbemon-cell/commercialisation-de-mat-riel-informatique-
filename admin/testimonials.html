@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Témoignages — Back-office OrdiMarket</title>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+<link rel="stylesheet" href="admin.css">
+</head>
+<body>
+<div class="admin-shell">
+  <aside class="admin-side" style="display:flex;flex-direction:column;">
+    <div class="brand"><img src="../ordimarket-logo.png" alt="OrdiMarket"></div>
+    <nav class="admin-nav">
+      <a href="dashboard.html"><i class='bx bx-laptop'></i> Produits</a>
+      <a href="testimonials.html" class="active"><i class='bx bx-message-square-dots'></i> Témoignages</a>
+      <a href="profile.html"><i class='bx bx-user-circle'></i> Mon profil</a>
+      <a href="subscribers.html"><i class='bx bx-envelope'></i> Abonnés newsletter</a>
+      <a href="reviews.html"><i class='bx bx-star'></i> Avis clients</a>
+    </nav>
+    <div class="signout">
+      <a href="#" id="signout-link" style="display:flex;align-items:center;gap:8px;font-size:13.5px;"><i class='bx bx-log-out'></i> Déconnexion</a>
+    </div>
+  </aside>
+
+  <main class="admin-main">
+    <div class="admin-topbar">
+      <h1>Témoignages clients</h1>
+      <button class="btn btn-primary" id="open-add"><i class='bx bx-plus'></i> Ajouter un témoignage</button>
+    </div>
+
+    <div class="card">
+      <table>
+        <thead><tr><th>Auteur</th><th>Rôle</th><th>Note</th><th>Extrait</th><th>Statut</th><th></th></tr></thead>
+        <tbody id="rows"><tr><td colspan="6" style="text-align:center;color:var(--ink-400);padding:30px;">Chargement…</td></tr></tbody>
+      </table>
+    </div>
+  </main>
+</div>
+
+<div class="modal-overlay" id="modal">
+  <div class="modal-box">
+    <div class="modal-head"><h3 id="modal-title">Ajouter un témoignage</h3><button class="modal-close" id="close-modal">&times;</button></div>
+    <form id="form">
+      <input type="hidden" id="t-id">
+      <div class="form-row"><label>Nom de l'auteur</label><input id="author-name" required></div>
+      <div class="form-row"><label>Rôle / entreprise</label><input id="author-role" placeholder="Ex : Client, Étudiant, Entreprise..."></div>
+      <div class="form-row"><label>Note (sur 5)</label>
+        <select id="rating"><option>5</option><option>4</option><option>3</option><option>2</option><option>1</option></select>
+      </div>
+      <div class="form-row"><label>Avis</label><textarea id="content" required></textarea></div>
+      <div class="form-row">
+        <label style="display:flex;align-items:center;gap:8px;font-weight:500;">
+          <input type="checkbox" id="is-published" checked style="width:auto;"> Afficher sur le site
+        </label>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px;">
+        <button type="button" class="btn btn-secondary" id="cancel">Annuler</button>
+        <button type="submit" class="btn btn-primary">Enregistrer</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import { requireAdmin, listTestimonials, createTestimonial, updateTestimonial, deleteTestimonial } from './supabase-client.js';
+import { escapeHtml, showToast, bindSignOut } from './admin-shared.js';
+
+let admin = null, editingId = null, testimonials = [];
+const toast = document.getElementById('toast');
+
+async function init() {
+  admin = await requireAdmin();
+  if (!admin) return;
+  bindSignOut();
+  await load();
+
+  document.getElementById('open-add').addEventListener('click', () => openModal());
+  document.getElementById('close-modal').addEventListener('click', closeModal);
+  document.getElementById('cancel').addEventListener('click', closeModal);
+  document.getElementById('form').addEventListener('submit', submitForm);
+}
+
+async function load() {
+  const rows = document.getElementById('rows');
+  testimonials = await listTestimonials();
+  const items = testimonials;
+  if (!items.length) {
+    rows.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--ink-400);padding:30px;">Aucun témoignage pour l'instant.</td></tr>`;
+    return;
+  }
+  rows.innerHTML = items.map((t) => `
+    <tr>
+      <td><b>${escapeHtml(t.name)}</b></td>
+      <td>${escapeHtml(t.author_role || '—')}</td>
+      <td>${'★'.repeat(t.rating)}${'☆'.repeat(5 - t.rating)}</td>
+      <td style="max-width:280px;">${escapeHtml(t.content.slice(0, 70))}${t.content.length > 70 ? '…' : ''}</td>
+      <td>${t.is_published ? '<span class="badge ok">Visible</span>' : '<span class="badge off">Masqué</span>'}</td>
+      <td style="white-space:nowrap;">
+        <button class="btn btn-secondary btn-sm" data-edit-id="${t.id}"><i class='bx bx-edit'></i></button>
+        <button class="btn btn-danger btn-sm" data-del="${t.id}"><i class='bx bx-trash'></i></button>
+      </td>
+    </tr>`).join('');
+
+  rows.querySelectorAll('[data-edit-id]').forEach((btn) =>
+    btn.addEventListener('click', () => { const found = testimonials.find(t => t.id === btn.dataset.editId); if (found) openModal(found); }));
+  rows.querySelectorAll('[data-del]').forEach((btn) =>
+    btn.addEventListener('click', async () => {
+      if (!confirm('Supprimer ce témoignage ?')) return;
+      await deleteTestimonial(btn.dataset.del);
+      showToast('Témoignage supprimé.');
+      load();
+    }));
+}
+
+function openModal(t = null) {
+  editingId = t?.id || null;
+  document.getElementById('modal-title').textContent = t ? 'Modifier le témoignage' : 'Ajouter un témoignage';
+  document.getElementById('author-name').value = t?.name || '';
+  document.getElementById('author-role').value = t?.author_role || '';
+  document.getElementById('rating').value = t?.rating || 5;
+  document.getElementById('content').value = t?.content || '';
+  document.getElementById('is-published').checked = t ? t.is_published : true;
+  document.getElementById('modal').classList.add('open');
+}
+
+function closeModal() { document.getElementById('modal').classList.remove('open'); }
+
+async function submitForm(e) {
+  e.preventDefault();
+  const payload = {
+    name: document.getElementById('author-name').value.trim(),
+    author_role: document.getElementById('author-role').value.trim(),
+    rating: Number(document.getElementById('rating').value),
+    content: document.getElementById('content').value.trim(),
+    is_published: document.getElementById('is-published').checked,
+    created_by: admin.id,
+  };
+  try {
+    if (editingId) await updateTestimonial(editingId, payload);
+    else await createTestimonial(payload);
+    showToast('Enregistré.');
+    closeModal();
+    load();
+  } catch (err) { showToast(err.message, true); }
+}
+
+init();
+</script>
+  <script type="module" src="admin-nav.js"></script>
+</body>
+</html>

@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mon profil — Back-office OrdiMarket</title>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+<link rel="stylesheet" href="admin.css">
+</head>
+<body>
+<div class="admin-shell">
+  <aside class="admin-side" style="display:flex;flex-direction:column;">
+    <div class="brand"><img src="../ordimarket-logo.png" alt="OrdiMarket"></div>
+    <nav class="admin-nav">
+      <a href="dashboard.html"><i class='bx bx-laptop'></i> Produits</a>
+      <a href="testimonials.html"><i class='bx bx-message-square-dots'></i> Témoignages</a>
+      <a href="profile.html" class="active"><i class='bx bx-user-circle'></i> Mon profil</a>
+      <a href="subscribers.html"><i class='bx bx-envelope'></i> Abonnés newsletter</a>
+      <a href="reviews.html"><i class='bx bx-star'></i> Avis clients</a>
+    </nav>
+    <div class="signout">
+      <a href="#" id="signout-link" style="display:flex;align-items:center;gap:8px;font-size:13.5px;"><i class='bx bx-log-out'></i> Déconnexion</a>
+    </div>
+  </aside>
+
+  <main class="admin-main" style="max-width:560px;">
+    <div class="admin-topbar"><h1>Mon profil</h1></div>
+    <div class="card card-pad">
+      <p style="font-size:13px;color:var(--ink-400);margin-bottom:18px;">
+        Ces informations s'affichent dynamiquement dans le footer public du site, à côté des réseaux sociaux, et servent au routage des commandes WhatsApp.
+      </p>
+
+      <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;">
+        <img id="avatar-preview" src="" style="width:64px;height:64px;border-radius:50%;background:var(--blue-050);object-fit:cover;">
+        <div>
+          <input type="file" id="avatar-input" accept="image/*" hidden>
+          <button type="button" class="btn btn-secondary btn-sm" id="avatar-btn">Changer la photo</button>
+        </div>
+      </div>
+
+      <form id="form">
+        <div class="form-row"><label>Nom complet</label><input id="full-name" required></div>
+        <div class="form-row"><label>Rôle affiché (ex : Fondateur, Vendeur)</label><input id="role-title"></div>
+        <div class="form-row"><label>Numéro WhatsApp (avec indicatif, ex : 2290198663414)</label><input id="whatsapp"></div>
+        <div class="form-row"><label>Téléphone direct</label><input id="phone"></div>
+        <div class="form-row"><label>Facebook</label><input id="facebook-url" type="url" placeholder="https://facebook.com/..."></div>
+        <div class="form-row"><label>Instagram</label><input id="instagram-url" type="url" placeholder="https://instagram.com/..."></div>
+        <div class="form-row"><label>TikTok</label><input id="tiktok-url" type="url" placeholder="https://tiktok.com/@..."></div>
+        <div class="form-row"><label>Telegram</label><input id="telegram-url" type="url" placeholder="https://t.me/..."></div>
+        <div class="form-row"><label>YouTube</label><input id="youtube-url" type="url" placeholder="https://youtube.com/..."></div>
+        <div class="form-row"><label>LinkedIn</label><input id="linkedin-url" type="url" placeholder="https://linkedin.com/in/..."></div>
+        <div class="form-row">
+          <label style="display:flex;align-items:center;gap:8px;font-weight:500;">
+            <input type="checkbox" id="display-public" style="width:auto;"> Afficher mon profil dans le footer public
+          </label>
+        </div>
+        <button type="submit" class="btn btn-primary">Enregistrer</button>
+      </form>
+    </div>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import { requireAdmin, updateOwnProfile, uploadAdminAvatar } from './supabase-client.js';
+import { showToast, bindSignOut } from './admin-shared.js';
+
+let admin = null;
+const toast = document.getElementById('toast');
+
+async function init() {
+  admin = await requireAdmin();
+  if (!admin) return;
+  bindSignOut();
+
+  document.getElementById('full-name').value = admin.full_name || '';
+  document.getElementById('role-title').value = admin.role_title || '';
+  document.getElementById('whatsapp').value = admin.whatsapp || '';
+  document.getElementById('phone').value = admin.phone || '';
+  document.getElementById('facebook-url').value = admin.facebook_url || '';
+  document.getElementById('instagram-url').value = admin.instagram_url || '';
+  document.getElementById('tiktok-url').value = admin.tiktok_url || '';
+  document.getElementById('telegram-url').value = admin.telegram_url || '';
+  document.getElementById('youtube-url').value = admin.youtube_url || '';
+  document.getElementById('linkedin-url').value = admin.linkedin_url || '';
+  document.getElementById('display-public').checked = admin.show_public_contact;
+  document.getElementById('avatar-preview').src = admin.avatar_url || '';
+
+  document.getElementById('avatar-btn').addEventListener('click', () => document.getElementById('avatar-input').click());
+  document.getElementById('avatar-input').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+      const url = await uploadAdminAvatar(admin.id, file);
+      document.getElementById('avatar-preview').src = url;
+      admin = await updateOwnProfile(admin.id, { full_name: admin.full_name, role_title: admin.role_title, whatsapp: admin.whatsapp, phone: admin.phone, facebook_url: admin.facebook_url, instagram_url: admin.instagram_url, tiktok_url: admin.tiktok_url, telegram_url: admin.telegram_url, youtube_url: admin.youtube_url, linkedin_url: admin.linkedin_url, show_public_contact: admin.show_public_contact });
+      showToast('Photo mise à jour.');
+    } catch (err) { showToast(err.message, true); }
+  });
+
+  document.getElementById('form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    try {
+      const socialFields = ['facebook-url','instagram-url','tiktok-url','telegram-url','youtube-url','linkedin-url'];
+      for (const fieldId of socialFields) {
+        const value = document.getElementById(fieldId).value.trim();
+        if (value) { const url = new URL(value); if (!['http:','https:'].includes(url.protocol)) throw new Error('Les liens sociaux doivent utiliser http:// ou https://.'); }
+      }
+      admin = await updateOwnProfile(admin.id, {
+        full_name: document.getElementById('full-name').value.trim(),
+        role_title: document.getElementById('role-title').value.trim(),
+        whatsapp: document.getElementById('whatsapp').value.trim(),
+        phone: document.getElementById('phone').value.trim(),
+        facebook_url: document.getElementById('facebook-url').value.trim(),
+        instagram_url: document.getElementById('instagram-url').value.trim(),
+        tiktok_url: document.getElementById('tiktok-url').value.trim(),
+        telegram_url: document.getElementById('telegram-url').value.trim(),
+        youtube_url: document.getElementById('youtube-url').value.trim(),
+        linkedin_url: document.getElementById('linkedin-url').value.trim(),
+        show_public_contact: document.getElementById('display-public').checked,
+      });
+      showToast('Profil mis à jour.');
+    } catch (err) { showToast(err.message, true); }
+  });
+}
+
+init();
+</script>
+  <script type="module" src="admin-nav.js"></script>
+</body>
+</html>

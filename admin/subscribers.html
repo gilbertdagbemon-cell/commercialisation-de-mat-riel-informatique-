@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Abonnés — Back-office OrdiMarket</title>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+<link rel="stylesheet" href="admin.css">
+</head>
+<body>
+<div class="admin-shell">
+  <aside class="admin-side" style="display:flex;flex-direction:column;">
+    <div class="brand"><img src="../ordimarket-logo.png" alt="OrdiMarket"></div>
+    <nav class="admin-nav">
+      <a href="dashboard.html"><i class='bx bx-laptop'></i> Produits</a>
+      <a href="testimonials.html"><i class='bx bx-message-square-dots'></i> Témoignages</a>
+      <a href="profile.html"><i class='bx bx-user-circle'></i> Mon profil</a>
+      <a href="subscribers.html" class="active"><i class='bx bx-envelope'></i> Abonnés newsletter</a>
+      <a href="reviews.html"><i class='bx bx-star'></i> Avis clients</a>
+    </nav>
+    <div class="signout">
+      <a href="#" id="signout-link" style="display:flex;align-items:center;gap:8px;font-size:13.5px;"><i class='bx bx-log-out'></i> Déconnexion</a>
+    </div>
+  </aside>
+
+  <main class="admin-main">
+    <div class="admin-topbar">
+      <h1>Abonnés newsletter</h1>
+      <span class="who" id="count"></span>
+    </div>
+    <div class="card">
+      <table>
+        <thead><tr><th>Email</th><th>Inscrit le</th><th>Statut</th></tr></thead>
+        <tbody id="rows"><tr><td colspan="3" style="text-align:center;color:var(--ink-400);padding:30px;">Chargement…</td></tr></tbody>
+      </table>
+    </div>
+  </main>
+</div>
+
+<script type="module">
+import { requireAdmin, supabase } from './supabase-client.js';
+import { escapeHtml, bindSignOut } from './admin-shared.js';
+
+async function init() {
+  const admin = await requireAdmin();
+  if (!admin) return;
+  bindSignOut();
+
+  const { data, error } = await supabase.from('subscribers').select('email,created_at,is_active').order('created_at', { ascending: false });
+  const rows = document.getElementById('rows');
+  if (error) { rows.innerHTML = `<tr><td colspan="3">Erreur de chargement.</td></tr>`; return; }
+  document.getElementById('count').textContent = `${data.length} abonné(s)`;
+  if (!data.length) {
+    rows.innerHTML = `<tr><td colspan="3" style="text-align:center;color:var(--ink-400);padding:30px;">Aucun abonné pour l'instant.</td></tr>`;
+    return;
+  }
+  rows.innerHTML = data.map((s) => `
+    <tr>
+      <td>${escapeHtml(s.email)}</td>
+      <td>${new Date(s.created_at).toLocaleDateString('fr-FR')}</td>
+      <td>${s.is_active ? '<span class="badge ok">Actif</span>' : '<span class="badge off">Désabonné</span>'}</td>
+    </tr>`).join('');
+}
+init();
+</script>
+  <script type="module" src="admin-nav.js"></script>
+</body>
+</html>

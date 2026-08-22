@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Produits — Back-office OrdiMarket</title>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+<link rel="stylesheet" href="admin.css">
+<style>
+.description-field{width:100%;min-height:320px;resize:vertical;line-height:1.6;white-space:pre-wrap;font-family:inherit}.media-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin-top:10px}.media-thumb{position:relative;border:1px solid #e5e7eb;border-radius:10px;padding:6px;background:#fff}.media-thumb img,.media-thumb video{display:block;width:100%;height:105px;object-fit:cover;border-radius:7px;background:#f3f4f6}.media-thumb .media-actions{display:flex;gap:5px;margin-top:6px}.media-thumb button{font-size:11px}.cover-label{font-size:10px;font-weight:700;color:#1278b9}.upload-zone.dragover{border-color:#219AE9;background:#eef9ff}.upload-note{font-size:12px;color:#68707a;margin-top:6px}.pending-files{margin-top:10px;font-size:12px}.pending-file{display:flex;justify-content:space-between;gap:8px;padding:5px 0;border-bottom:1px solid #eee}</style>
+</head>
+<body>
+<div class="admin-shell">
+  <aside class="admin-side" style="display:flex;flex-direction:column;">
+    <div class="brand"><img src="../ordimarket-logo.png" alt="OrdiMarket"></div>
+    <nav class="admin-nav">
+      <a href="dashboard.html" class="active"><i class='bx bx-laptop'></i> Produits</a>
+      <a href="testimonials.html"><i class='bx bx-message-square-dots'></i> Témoignages</a>
+      <a href="profile.html"><i class='bx bx-user-circle'></i> Mon profil</a>
+      <a href="subscribers.html"><i class='bx bx-envelope'></i> Abonnés newsletter</a>
+      <a href="reviews.html"><i class='bx bx-star'></i> Avis clients</a>
+    </nav>
+    <div class="signout">
+      <a href="#" id="signout-link" style="display:flex;align-items:center;gap:8px;font-size:13.5px;"><i class='bx bx-log-out'></i> Déconnexion</a>
+    </div>
+  </aside>
+
+  <main class="admin-main">
+    <div class="admin-topbar">
+      <div>
+        <h1>Produits</h1>
+        <p class="who" id="who">Chargement…</p>
+      </div>
+      <button class="btn btn-primary" id="open-add"><i class='bx bx-plus'></i> Ajouter un produit</button>
+    </div>
+
+    <div class="dashboard-stats" id="dashboard-stats">
+      <div class="stat-card"><span>Produits publiés</span><strong id="stat-published">—</strong></div>
+      <div class="stat-card"><span>Rupture de stock</span><strong id="stat-out">—</strong></div>
+      <div class="stat-card"><span>Abonnés actifs</span><strong id="stat-subscribers">—</strong></div>
+    </div>
+    <div class="card">
+      <div class="table-toolbar"><label class="table-search"><i class="bx bx-search"></i><input id="product-search" type="search" placeholder="Rechercher par titre ou marque…" autocomplete="off"></label></div>
+      <div class="table-wrap"><table>
+        <thead>
+          <tr><th>Photo</th><th><button class="sort-header" data-sort="title">Produit <span></span></button></th><th><button class="sort-header" data-sort="brand">Marque <span></span></button></th><th><button class="sort-header" data-sort="price">Prix <span></span></button></th><th><button class="sort-header" data-sort="stock">Stock <span></span></button></th><th>Statut</th><th></th></tr>
+        </thead>
+        <tbody id="product-rows">
+          <tr><td colspan="7" style="text-align:center;color:var(--ink-400);padding:30px;">Chargement des produits…</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+  </main>
+</div>
+
+<!-- Modal Ajout / Édition produit -->
+<div class="modal-overlay" id="product-modal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3 id="modal-title">Ajouter un produit</h3>
+      <button class="modal-close" id="close-modal">&times;</button>
+    </div>
+    <form id="product-form">
+      <input type="hidden" id="product-id">
+      <div class="form-row"><label>Titre du produit</label><input id="title" required placeholder="Ex : HP EliteBook 840 G9"></div>
+
+      <div class="form-grid">
+        <div class="form-row">
+          <label>Marque</label>
+          <div class="inline-add">
+            <select id="brand-select"></select>
+            <button type="button" class="btn btn-secondary btn-sm" id="add-brand-btn"><i class='bx bx-plus'></i></button>
+          </div>
+        </div>
+        <div class="form-row">
+          <label>Catégorie</label>
+          <div class="inline-add">
+            <select id="category-select"></select>
+            <button type="button" class="btn btn-secondary btn-sm" id="add-category-btn"><i class='bx bx-plus'></i></button>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-grid">
+        <div class="form-row"><label>Prix (FCFA)</label><input id="price" type="number" min="0" required></div>
+        <div class="form-row"><label>Stock (quantité)</label><input id="stock" type="number" min="0" value="1" required></div>
+      </div>
+
+      <div class="form-row">
+        <label>État</label>
+        <select id="condition">
+          <option value="neuf">Neuf</option>
+          <option value="quasi-neuf">Quasi-neuf</option>
+          <option value="occasion" selected>Occasion</option>
+        </select>
+      </div>
+
+      <div class="form-row">
+        <label for="description">Description / Fiche technique <span aria-hidden="true">*</span></label>
+        <textarea id="description" class="description-field" maxlength="20000" required placeholder="💻✨ Nom et présentation du PC...
+👨‍💻 Processeur : ...
+🍂 RAM : ...
+🍂 Stockage : ...
+🎮 Carte graphique : ...
+🖥️ Écran : ...
+⌨️ Clavier : ...
+🔋 Autonomie : ...
+🌐 Connectivité : ...
+💻 Système : ...
+🍂 État : ...
+🌏 Prix : ..."></textarea>
+        <small class="upload-note">Un seul champ libre : emojis, puces, espaces et sauts de ligne sont conservés à l'affichage public.</small>
+      </div>
+
+      <div class="form-row">
+        <label>Photos & vidéo du produit</label>
+        <div class="upload-zone" id="upload-zone">Cliquez ou déposez des fichiers ici (images ou vidéo de démo)</div>
+        <input type="file" id="file-input" accept="image/*,video/*" multiple hidden>
+        <div class="media-grid" id="media-preview"></div>
+        <div class="pending-files" id="pending-files"></div>
+        <div class="upload-note">Les fichiers sélectionnés sont envoyés après l’enregistrement du produit. La première image devient automatiquement la couverture si aucune couverture n’existe.</div>
+      </div>
+
+      <div class="form-row">
+        <label style="display:flex;align-items:center;gap:8px;font-weight:500;">
+          <input type="checkbox" id="is-published" checked style="width:auto;"> Publier immédiatement sur le site
+        </label>
+      </div>
+
+      <div class="form-row">
+        <label style="display:flex;align-items:center;gap:8px;font-weight:500;">
+          <input type="checkbox" id="is-featured" style="width:auto;"> Mettre ce produit en vedette sur l'accueil
+        </label>
+      </div>
+
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;">
+        <button type="button" class="btn btn-secondary" id="cancel-modal">Annuler</button>
+        <button type="submit" class="btn btn-primary" id="save-btn">Enregistrer</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="toast" id="toast" data-duration="3200"></div>
+
+<script type="module">
+import { requireAdmin, listProducts, getProduct, createProduct, updateProduct, deleteProduct, listBrands, createBrand, listCategories, createCategory, uploadProductMedia, setMediaCover, deleteMedia, notifyNewProduct, countActiveSubscribers } from './supabase-client.js';
+import { escapeHtml, showToast, bindSignOut } from './admin-shared.js';
+let admin=null, editingProductId=null, currentMedia=[], pendingFiles=[], products=[];
+let tableState={search:'',sort:'title',direction:'asc'};
+const $=id=>document.getElementById(id), modal=$('product-modal'), form=$('product-form');
+function price(v){return Number(v||0).toLocaleString('fr-FR').replace(/\u202f/g,' ')+' FCFA'}
+async function loadBrands(){const bs=await listBrands();$('brand-select').innerHTML='<option value="">Choisir une marque</option>'+bs.map(b=>`<option value="${escapeHtml(b.id)}">${escapeHtml(b.name)}</option>`).join('')}
+async function loadCategories(){const cs=await listCategories();$('category-select').innerHTML='<option value="">Choisir une catégorie</option>'+cs.map(c=>`<option value="${escapeHtml(c.id)}">${escapeHtml(c.name)}</option>`).join('')}
+function visibleProducts(){const q=tableState.search.toLocaleLowerCase('fr-FR');let list=products.filter(p=>`${p.title||''} ${p.brands?.name||''}`.toLocaleLowerCase('fr-FR').includes(q));const key=tableState.sort;list.sort((a,b)=>{let av=key==='brand'?(a.brands?.name||''):key==='price'?Number(a.price||0):key==='stock'?Number(a.stock||0):(a.title||'');let bv=key==='brand'?(b.brands?.name||''):key==='price'?Number(b.price||0):key==='stock'?Number(b.stock||0):(b.title||'');if(typeof av==='string')return av.localeCompare(bv,'fr-FR')*(tableState.direction==='asc'?1:-1);return (av-bv)*(tableState.direction==='asc'?1:-1)});return list}
+function renderRows(){const rows=$('product-rows'), list=visibleProducts();if(!list.length){rows.innerHTML='<tr><td colspan="7" style="text-align:center;padding:35px">Aucun produit correspondant.</td></tr>';return}rows.innerHTML=list.map(p=>{const m=(p.media||[]).find(x=>x.is_cover)||(p.media||[])[0];return `<tr><td data-label="Image">${m?.type==='image'?`<img class="thumb" src="${escapeHtml(m.url)}" alt="">`:'<div class="thumb"><i class="bx bx-laptop"></i></div>'}</td><td data-label="Produit"><b>${escapeHtml(p.title)}</b>${p.is_featured?'<div><span class="badge ok">Vedette</span></div>':''}</td><td data-label="Marque">${escapeHtml(p.brands?.name||'—')}</td><td data-label="Prix">${price(p.price)}</td><td data-label="Stock">${Number(p.stock)<=0?'<span class="badge off">Rupture</span>':Number(p.stock)<=2?`<span class="badge low">Reste ${p.stock}</span>`:'<span class="badge ok">En stock</span>'}</td><td data-label="Statut">${p.is_published?'<span class="badge ok">Publié</span>':'<span class="badge off">Brouillon</span>'}</td><td data-label="Actions"><button class="btn btn-secondary btn-sm" data-edit="${p.id}"><i class="bx bx-edit"></i></button> <button class="btn btn-danger btn-sm" data-del="${p.id}"><i class="bx bx-trash"></i></button></td></tr>`}).join('');rows.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>openEdit(b.dataset.edit));rows.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>removeProduct(b.dataset.del));updateSortIndicators()}
+function updateSortIndicators(){document.querySelectorAll('.sort-header').forEach(b=>{const span=b.querySelector('span');const active=b.dataset.sort===tableState.sort;b.classList.toggle('active',active);span.textContent=active?(tableState.direction==='asc'?'↑':'↓'):''})}
+async function loadProducts(){const rows=$('product-rows');try{products=await listProducts();$('stat-published').textContent=products.filter(p=>p.is_published).length;$('stat-out').textContent=products.filter(p=>Number(p.stock)<=0).length;renderRows()}catch(e){rows.innerHTML='<tr><td colspan="7" style="text-align:center;padding:35px">Erreur de chargement.</td></tr>';showToast(e.message,true)}}
+async function loadStats(){try{$('stat-subscribers').textContent=await countActiveSubscribers()}catch(e){$('stat-subscribers').textContent='—';showToast('Impossible de charger le nombre d’abonnés.',true)}}
+function reset(){form.reset();editingProductId=null;currentMedia=[];pendingFiles=[];$('product-id').value='';$('stock').value=1;$('condition').value='occasion';$('is-published').checked=true;$('is-featured').checked=false;renderMedia();renderPending()}
+function openModal(){modal.classList.add('open')} function closeModal(){modal.classList.remove('open')}
+function openAdd(){reset();$('modal-title').textContent='Ajouter un produit';openModal()}
+async function openEdit(id){try{const p=await getProduct(id);reset();editingProductId=id;$('modal-title').textContent='Modifier le produit';$('product-id').value=p.id;$('title').value=p.title||'';$('brand-select').value=p.brand_id||'';$('category-select').value=p.category_id||'';$('price').value=p.price??'';$('stock').value=p.stock??0;$('condition').value=p.condition||'occasion';$('description').value=p.description||'';$('is-published').checked=!!p.is_published;$('is-featured').checked=!!p.is_featured;currentMedia=[...(p.media||[])].sort((a,b)=>a.position-b.position);currentMedia._publishedBefore=Boolean(p.is_published);renderMedia();openModal()}catch(e){showToast(e.message,true)}}
+function renderMedia(){const box=$('media-preview');if(!currentMedia.length){box.innerHTML='';return}box.innerHTML=currentMedia.map(m=>`<div class="media-thumb"><div>${m.type==='video'?`<video src="${escapeHtml(m.url)}" controls preload="metadata"></video>`:`<img src="${escapeHtml(m.url)}" alt="">`}</div><div class="media-actions"><span class="cover-label">${m.is_cover?'★ Couverture':'Média'}</span>${!m.is_cover?`<button type="button" class="btn btn-secondary btn-sm" data-cover="${m.id}">Couverture</button>`:''}<button type="button" class="btn btn-danger btn-sm" data-remove="${m.id}">Supprimer</button></div></div>`).join('');box.querySelectorAll('[data-cover]').forEach(b=>b.onclick=async()=>{try{await setMediaCover(editingProductId,b.dataset.cover);currentMedia=currentMedia.map(m=>({...m,is_cover:m.id===b.dataset.cover}));renderMedia();showToast('Couverture mise à jour.')}catch(e){showToast(e.message,true)}});box.querySelectorAll('[data-remove]').forEach(b=>b.onclick=async()=>{const m=currentMedia.find(x=>x.id===b.dataset.remove);if(!m||!confirm('Supprimer ce média ?'))return;try{await deleteMedia(m.id,m.url);currentMedia=currentMedia.filter(x=>x.id!==m.id);renderMedia();showToast('Média supprimé.')}catch(e){showToast(e.message,true)}})}
+function renderPending(){const box=$('pending-files');if(!box)return;box.innerHTML=pendingFiles.map((f,i)=>`<div class="pending-file"><span>${escapeHtml(f.name)}</span><button type="button" class="btn btn-danger btn-sm" data-pending-remove="${i}">Retirer</button></div>`).join('');box.querySelectorAll('[data-pending-remove]').forEach(b=>b.onclick=()=>{pendingFiles.splice(Number(b.dataset.pendingRemove),1);renderPending()})}
+function addFiles(files){const ok=[...files].filter(f=>f.type.startsWith('image/')||f.type.startsWith('video/'));if(ok.length!==[...files].length)showToast('Certains fichiers ont été ignorés : format non supporté.',true);pendingFiles.push(...ok);renderPending()}
+async function uploadPending(productId){for(let i=0;i<pendingFiles.length;i++){await uploadProductMedia(productId,pendingFiles[i],{position:currentMedia.length+i,isCover:currentMedia.length===0&&i===0})}pendingFiles=[];renderPending()}
+async function save(e){e.preventDefault();const title=$('title').value.trim(),brand=$('brand-select').value,cat=$('category-select').value,priceN=Number($('price').value),stockN=Number($('stock').value);if(!title||!brand||!cat||!$('description').value.trim()||!Number.isFinite(priceN)||priceN<0||!Number.isInteger(stockN)||stockN<0){showToast('Veuillez vérifier les champs obligatoires.',true);return}const btn=$('save-btn'),wasEditing=Boolean(editingProductId);btn.disabled=true;btn.textContent='Enregistrement…';const descriptionText=$('description').value.trim();const payload={title,brand_id:brand,category_id:cat,price:priceN,stock:stockN,condition:$('condition').value,specs:{text:descriptionText},description:descriptionText,is_published:$('is-published').checked,is_featured:$('is-featured').checked};try{let p=editingProductId?await updateProduct(editingProductId,payload):await createProduct({...payload,created_by:admin.id});editingProductId=p.id;$('product-id').value=p.id;await uploadPending(p.id);try{const result=await notifyNewProduct(p.id);showToast(result?.sent_to_count?`${wasEditing?'Produit mis à jour.':'Produit créé.'} Notification envoyée à ${result.sent_to_count} abonné(s).`:`${wasEditing?'Produit mis à jour.':'Produit créé.'} Aucun abonné à notifier.`)}catch(notificationError){console.error('Notification nouveau produit:',notificationError);showToast(wasEditing?'Produit mis à jour, mais la notification email a échoué.':'Produit créé, mais la notification email a échoué.',true)}closeModal();await loadProducts();reset()}catch(e){showToast(e.message||'Erreur lors de l’enregistrement.',true)}finally{btn.disabled=false;btn.textContent='Enregistrer'}}
+async function removeProduct(id){if(!confirm('Supprimer définitivement ce produit et ses médias ?'))return;try{await deleteProduct(id);showToast('Produit supprimé.');await loadProducts()}catch(e){showToast(e.message,true)}}
+function bind(){$('open-add').onclick=openAdd;$('close-modal').onclick=closeModal;$('cancel-modal').onclick=closeModal;modal.onclick=e=>{if(e.target===modal)closeModal()};form.onsubmit=save;bindSignOut();$('product-search').oninput=e=>{tableState.search=e.target.value;renderRows()};document.querySelectorAll('.sort-header').forEach(b=>b.onclick=()=>{if(tableState.sort===b.dataset.sort)tableState.direction=tableState.direction==='asc'?'desc':'asc';else{tableState.sort=b.dataset.sort;tableState.direction='asc'}renderRows()});$('upload-zone').onclick=()=>$('file-input').click();$('file-input').onchange=e=>{addFiles(e.target.files);e.target.value=''};['dragenter','dragover'].forEach(n=>$('upload-zone').addEventListener(n,e=>{e.preventDefault();$('upload-zone').classList.add('dragover')}));['dragleave','drop'].forEach(n=>$('upload-zone').addEventListener(n,e=>{e.preventDefault();$('upload-zone').classList.remove('dragover')}));$('upload-zone').ondrop=e=>addFiles(e.dataTransfer.files);$('add-brand-btn').onclick=async()=>{const n=prompt('Nom de la marque :');if(!n?.trim())return;try{const b=await createBrand(n);await loadBrands();$('brand-select').value=b.id;showToast('Marque ajoutée.')}catch(e){showToast(e.message,true)}};$('add-category-btn').onclick=async()=>{const n=prompt('Nom de la catégorie :');if(!n?.trim())return;try{const c=await createCategory(n);await loadCategories();$('category-select').value=c.id;showToast('Catégorie ajoutée.')}catch(e){showToast(e.message,true)}}}
+async function init(){try{admin=await requireAdmin();if(!admin)return;$('who').textContent=`Connecté(e) en tant que ${admin.full_name} (${admin.role})`;bind();await Promise.all([loadBrands(),loadCategories(),loadProducts(),loadStats()])}catch(e){showToast(e.message,true)}}
+init();
+</script>
+  <script type="module" src="admin-nav.js"></script>
+</body>
+</html>
