@@ -1,8 +1,130 @@
 <!DOCTYPE html>
-<html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Équipe admin — OrdiMarket</title><link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"><link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet"><link rel="stylesheet" href="admin.css"></head>
-<body><div class="admin-shell"><aside class="admin-side" style="display:flex;flex-direction:column"><div class="brand"><img src="../ordimarket-logo.png" alt="OrdiMarket"></div><nav class="admin-nav"><a href="dashboard.html"><i class="bx bx-laptop"></i> Produits</a><a href="testimonials.html"><i class="bx bx-message-square-dots"></i> Témoignages</a><a href="profile.html"><i class="bx bx-user-circle"></i> Mon profil</a><a href="subscribers.html"><i class="bx bx-envelope"></i> Abonnés newsletter</a>
-      <a href="reviews.html"><i class='bx bx-star'></i> Avis clients</a></nav><div class="signout"><a href="#" id="signout-link" style="display:flex;align-items:center;gap:8px;font-size:13.5px"><i class="bx bx-log-out"></i> Déconnexion</a></div></aside><main class="admin-main"><div class="admin-topbar"><div><h1>Équipe administrateurs</h1><p class="who">Gestion des comptes existants</p></div></div><div class="card"><div class="team-note">La création de comptes reste manuelle via Supabase Auth. Cette page permet uniquement de modifier le rôle <b>admin/vendeur</b> et le statut actif.</div><div class="table-wrap"><table><thead><tr><th>Nom</th><th>Email</th><th>Rôle</th><th>Statut</th><th>Actions</th></tr></thead><tbody id="team-rows"><tr><td colspan="5" style="text-align:center;padding:30px">Chargement…</td></tr></tbody></table></div></div></main></div><div class="toast" id="toast"></div><script type="module">
-import { requireAdmin, listAdmins, updateAdminAccount } from './supabase-client.js'; import { escapeHtml, showToast, bindSignOut } from './admin-shared.js';
-let currentAdmin=null, admins=[]; const rows=document.getElementById('team-rows');
-function render(){rows.innerHTML=admins.map(a=>{const isSelf=a.id===currentAdmin.id;return `<tr><td data-label="Nom">${escapeHtml(a.full_name||'—')}</td><td data-label="Email">${escapeHtml(a.email||'—')}</td><td data-label="Rôle"><select data-role="${a.id}" ${a.role==='super_admin'||isSelf?'disabled':''}><option value="admin" ${a.role==='admin'?'selected':''}>Admin</option><option value="vendeur" ${a.role==='vendeur'?'selected':''}>Vendeur</option>${a.role==='super_admin'?'<option selected>super_admin</option>':''}</select></td><td data-label="Statut"><span class="badge ${a.is_active?'ok':'off'}">${a.is_active?'Actif':'Inactif'}</span></td><td data-label="Actions"><button type="button" class="btn ${a.is_active?'btn-danger':'btn-primary'} btn-sm" data-toggle="${a.id}" ${a.role==='super_admin'||isSelf?'disabled':''}>${a.is_active?'Désactiver':'Réactiver'}</button></td></tr>`}).join('');rows.querySelectorAll('[data-role]').forEach(select=>select.addEventListener('change',async()=>{const a=admins.find(x=>x.id===select.dataset.role);if(!a)return;try{await updateAdminAccount(a.id,{role:select.value,is_active:a.is_active});showToast('Rôle mis à jour.')}catch(e){select.value=a.role;showToast(e.message,true)}}));rows.querySelectorAll('[data-toggle]').forEach(button=>button.addEventListener('click',async()=>{const a=admins.find(x=>x.id===button.dataset.toggle);if(!a)return;try{await updateAdminAccount(a.id,{role:a.role,is_active:!a.is_active});a.is_active=!a.is_active;render();showToast(a.is_active?'Compte réactivé.':'Compte désactivé.')}catch(e){showToast(e.message,true)}}))}
-async function init(){currentAdmin=await requireAdmin();if(!currentAdmin)return;if(currentAdmin.role!=='super_admin'){showToast('Accès réservé au super administrateur.',true);setTimeout(()=>window.location.replace('dashboard.html'),900);return}bindSignOut();try{admins=await listAdmins();render()}catch(e){showToast(e.message,true)}}init();</script><script type="module" src="admin-nav.js"></script></body></html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Équipe admin — OrdiMarket</title>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet"><link rel="stylesheet" href="admin.css">
+</head>
+<body>
+<div class="admin-shell">
+<aside class="admin-side" style="display:flex;flex-direction:column"><div class="brand"><img src="../ordimarket-logo.png" alt="OrdiMarket"></div>
+<nav class="admin-nav"><a href="dashboard.html"><i class="bx bx-laptop"></i> Produits</a><a href="testimonials.html"><i class="bx bx-message-square-dots"></i> Témoignages</a><a href="profile.html"><i class="bx bx-user-circle"></i> Mon profil</a><a href="subscribers.html"><i class="bx bx-envelope"></i> Abonnés newsletter</a><a href="reviews.html"><i class='bx bx-star'></i> Avis clients</a></nav>
+<div class="signout"><a href="#" id="signout-link" style="display:flex;align-items:center;gap:8px;font-size:13.5px"><i class="bx bx-log-out"></i> Déconnexion</a></div></aside>
+<main class="admin-main">
+<div class="admin-topbar"><div><h1>Équipe administrateurs</h1><p class="who">Création et gestion des comptes administrateurs</p></div><button class="btn btn-primary" id="add-admin-btn" type="button"><i class="bx bx-user-plus"></i> Ajouter un administrateur</button></div>
+<div class="card"><div class="team-note">Seul le <b>super administrateur</b> peut créer, modifier ou désactiver les comptes. La création du compte Auth et son association à <code>admins</code> sont réalisées automatiquement et de façon sécurisée.</div>
+<div class="table-wrap"><table><thead><tr><th>Nom</th><th>Email</th><th>Rôle</th><th>Fonction</th><th>Statut</th><th>Actions</th></tr></thead><tbody id="team-rows"><tr><td colspan="6" style="text-align:center;padding:30px">Chargement…</td></tr></tbody></table></div></div>
+</main></div>
+
+<div class="modal-overlay" id="admin-modal" aria-hidden="true"><div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="admin-modal-title">
+<div class="modal-head"><div><h2 id="admin-modal-title">Ajouter un administrateur</h2><p class="who" id="admin-modal-subtitle">Un e-mail d’invitation sera envoyé. Le nouvel administrateur choisira son mot de passe.</p></div><button class="modal-close" id="modal-close" type="button" aria-label="Fermer"><i class="bx bx-x"></i></button></div>
+<form id="admin-form">
+<div class="form-grid">
+<div class="form-row"><label for="full_name">Nom complet *</label><input id="full_name" required maxlength="120"></div>
+<div class="form-row"><label for="email">Email *</label><input id="email" type="email" required maxlength="254" autocomplete="email"></div>
+<div class="form-row form-row-full"><div class="invite-info"><i class="bx bx-envelope"></i><span>Un e-mail d’invitation sera envoyé à cette adresse. La personne choisira elle-même son mot de passe via un lien sécurisé.</span></div></div>
+<div class="form-row"><label for="role">Rôle *</label><select id="role"><option value="admin">Admin</option><option value="vendeur">Vendeur</option></select></div>
+<div class="form-row"><label for="role_title">Fonction / titre</label><input id="role_title" value="Conseiller Ventes" maxlength="120"></div>
+<div class="form-row"><label for="display_order">Ordre d'affichage</label><input id="display_order" type="number" value="0" min="0" step="1"></div>
+<div class="form-row"><label for="phone">Téléphone</label><input id="phone" type="tel" maxlength="40"></div>
+<div class="form-row"><label for="whatsapp">WhatsApp</label><input id="whatsapp" type="tel" maxlength="40"></div>
+<div class="form-row"><label for="facebook_url">Facebook</label><input id="facebook_url" type="url" maxlength="500"></div>
+<div class="form-row"><label for="instagram_url">Instagram</label><input id="instagram_url" type="url" maxlength="500"></div>
+<div class="form-row"><label for="tiktok_url">TikTok</label><input id="tiktok_url" type="url" maxlength="500"></div>
+<div class="form-row"><label for="telegram_url">Telegram</label><input id="telegram_url" type="url" maxlength="500"></div>
+<div class="form-row"><label for="youtube_url">YouTube</label><input id="youtube_url" type="url" maxlength="500"></div>
+<div class="form-row"><label for="linkedin_url">LinkedIn</label><input id="linkedin_url" type="url" maxlength="500"></div>
+</div>
+<div class="form-row"><label for="avatar_url">URL de l'avatar</label><input id="avatar_url" type="url" maxlength="1000"></div>
+<div class="form-grid"><label class="check-field"><input id="is_active" type="checkbox" checked> Compte actif</label><label class="check-field"><input id="show_public_contact" type="checkbox" checked> Afficher les contacts publiquement</label></div>
+<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:10px"><button class="btn btn-secondary" id="cancel-admin" type="button">Annuler</button><button class="btn btn-primary" id="save-admin" type="submit"><i class="bx bx-user-plus"></i> Créer le compte</button></div>
+</form></div></div>
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import { requireAdmin, listAdmins, createAdminAccount, updateAdminAccount } from './supabase-client.js';
+import { escapeHtml, showToast, bindSignOut } from './admin-shared.js';
+
+let currentAdmin = null;
+let admins = [];
+const rows = document.getElementById('team-rows');
+const modal = document.getElementById('admin-modal');
+const form = document.getElementById('admin-form');
+const saveBtn = document.getElementById('save-admin');
+
+const val = id => document.getElementById(id).value;
+const setVal = (id, value='') => { document.getElementById(id).value = value ?? ''; };
+const checked = id => document.getElementById(id).checked;
+const setChecked = (id, value) => { document.getElementById(id).checked = Boolean(value); };
+
+function openModal() { form.reset(); setVal('role_title','Conseiller Ventes'); setVal('display_order','0'); setChecked('is_active',true); setChecked('show_public_contact',true); modal.classList.add('open'); modal.setAttribute('aria-hidden','false'); setTimeout(()=>document.getElementById('full_name').focus(),50); }
+function closeModal() { modal.classList.remove('open'); modal.setAttribute('aria-hidden','true'); }
+
+document.getElementById('add-admin-btn').addEventListener('click', openModal);
+document.getElementById('modal-close').addEventListener('click', closeModal);
+document.getElementById('cancel-admin').addEventListener('click', closeModal);
+modal.addEventListener('click', e => { if(e.target === modal) closeModal(); });
+document.addEventListener('keydown', e => { if(e.key === 'Escape' && modal.classList.contains('open')) closeModal(); });
+
+function render() {
+  rows.innerHTML = admins.map(a => {
+    const isSelf = a.id === currentAdmin.id;
+    const locked = a.role === 'super_admin' || isSelf;
+    return `<tr>
+      <td data-label="Nom">${escapeHtml(a.full_name || '—')}</td>
+      <td data-label="Email">${escapeHtml(a.email || '—')}</td>
+      <td data-label="Rôle"><select data-role="${a.id}" ${locked?'disabled':''}><option value="admin" ${a.role==='admin'?'selected':''}>Admin</option><option value="vendeur" ${a.role==='vendeur'?'selected':''}>Vendeur</option>${a.role==='super_admin'?'<option value="super_admin" selected>Super admin</option>':''}</select></td>
+      <td data-label="Fonction">${escapeHtml(a.role_title || 'Conseiller Ventes')}</td>
+      <td data-label="Statut"><span class="badge ${a.is_active?'ok':'off'}">${a.is_active?'Actif':'Inactif'}</span></td>
+      <td data-label="Actions"><div class="action-row"><button type="button" class="btn btn-secondary btn-sm" data-edit="${a.id}" ${locked?'disabled':''}>Modifier</button><button type="button" class="btn ${a.is_active?'btn-danger':'btn-primary'} btn-sm" data-toggle="${a.id}" ${locked?'disabled':''}>${a.is_active?'Désactiver':'Réactiver'}</button></div></td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="6" style="text-align:center;padding:30px">Aucun administrateur.</td></tr>';
+
+  rows.querySelectorAll('[data-role]').forEach(select => select.addEventListener('change', async () => {
+    const a = admins.find(x=>x.id===select.dataset.role); if(!a)return;
+    try { const updated = await updateAdminAccount(a.id,{...a,role:select.value}); Object.assign(a,updated); render(); showToast('Rôle mis à jour.'); }
+    catch(e){ select.value=a.role; showToast(e.message,true); }
+  }));
+  rows.querySelectorAll('[data-toggle]').forEach(button => button.addEventListener('click', async () => {
+    const a=admins.find(x=>x.id===button.dataset.toggle); if(!a)return;
+    const action=a.is_active?'désactiver':'réactiver';
+    if(!confirm(`Voulez-vous ${action} le compte de ${a.full_name || a.email} ?`)) return;
+    try { const updated=await updateAdminAccount(a.id,{...a,is_active:!a.is_active}); Object.assign(a,updated); render(); showToast(a.is_active?'Compte réactivé.':'Compte désactivé.'); }
+    catch(e){ showToast(e.message,true); }
+  }));
+  rows.querySelectorAll('[data-edit]').forEach(button => button.addEventListener('click', () => {
+    const a=admins.find(x=>x.id===button.dataset.edit); if(!a)return;
+    // Les comptes existants peuvent être édités dans cette version uniquement par leurs champs de profil.
+    setVal('full_name',a.full_name); setVal('email',a.email); document.getElementById('email').disabled=true; 
+    setVal('role',a.role==='vendeur'?'vendeur':'admin'); setVal('role_title',a.role_title); setVal('display_order',a.display_order); setVal('phone',a.phone); setVal('whatsapp',a.whatsapp); setVal('facebook_url',a.facebook_url); setVal('instagram_url',a.instagram_url); setVal('tiktok_url',a.tiktok_url); setVal('telegram_url',a.telegram_url); setVal('youtube_url',a.youtube_url); setVal('linkedin_url',a.linkedin_url); setVal('avatar_url',a.avatar_url); setChecked('is_active',a.is_active); setChecked('show_public_contact',a.show_public_contact);
+    form.dataset.editId=a.id; document.getElementById('admin-modal-title').textContent='Modifier l’administrateur'; document.getElementById('admin-modal-subtitle').textContent='Modifiez les informations du compte existant.'; saveBtn.innerHTML='<i class="bx bx-save"></i> Enregistrer'; modal.classList.add('open'); modal.setAttribute('aria-hidden','false');
+  }));
+}
+
+function resetCreateMode(){ form.reset(); delete form.dataset.editId; document.getElementById('email').disabled=false; setVal('role_title','Conseiller Ventes'); setVal('display_order','0'); setChecked('is_active',true); setChecked('show_public_contact',true); document.getElementById('admin-modal-title').textContent='Ajouter un administrateur'; document.getElementById('admin-modal-subtitle').textContent='Un e-mail d’invitation sera envoyé. Le nouvel administrateur choisira son mot de passe.'; saveBtn.innerHTML='<i class="bx bx-user-plus"></i> Créer le compte'; }
+document.getElementById('add-admin-btn').addEventListener('click', resetCreateMode);
+
+form.addEventListener('submit', async e => {
+  e.preventDefault();
+  saveBtn.disabled=true;
+  const editId=form.dataset.editId;
+  try {
+    const payload={full_name:val('full_name'),email:val('email'),role:val('role'),role_title:val('role_title'),display_order:val('display_order'),phone:val('phone'),whatsapp:val('whatsapp'),facebook_url:val('facebook_url'),instagram_url:val('instagram_url'),tiktok_url:val('tiktok_url'),telegram_url:val('telegram_url'),youtube_url:val('youtube_url'),linkedin_url:val('linkedin_url'),avatar_url:val('avatar_url'),is_active:checked('is_active'),show_public_contact:checked('show_public_contact')};
+    if(editId){ const existing=admins.find(x=>x.id===editId); if(existing?.role==='super_admin') throw new Error('Le compte super_admin est protégé.'); const updated=await updateAdminAccount(editId,payload); const idx=admins.findIndex(x=>x.id===editId); if(idx>=0) admins[idx]=updated; showToast('Administrateur mis à jour.'); }
+    else { const created=await createAdminAccount(payload); admins.push(created); admins.sort((a,b)=>(a.display_order-b.display_order)||String(a.full_name).localeCompare(String(b.full_name),'fr')); showToast('Administrateur créé avec succès.'); }
+    closeModal(); resetCreateMode(); render();
+  } catch(error) { showToast(error?.message || 'Une erreur est survenue.',true); }
+  finally { saveBtn.disabled=false; }
+});
+
+async function init(){
+  currentAdmin=await requireAdmin(); if(!currentAdmin)return;
+  if(currentAdmin.role!=='super_admin'){showToast('Accès réservé au super administrateur.',true);setTimeout(()=>window.location.replace('dashboard.html'),900);return;}
+  bindSignOut();
+  try { admins=await listAdmins(); render(); } catch(e){ showToast(e.message,true); }
+}
+init();
+</script>
+<script type="module" src="admin-nav.js"></script>
+</body></html>

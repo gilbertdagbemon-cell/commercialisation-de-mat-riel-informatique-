@@ -126,12 +126,60 @@ export async function deactivateSubscriber(id, admin) {
 }
 
 export async function listAdmins() {
-  return throwIfError(await supabase.from('admins').select('id,auth_user_id,email,full_name,role,is_active').order('full_name')) || [];
+  return throwIfError(await supabase
+    .from('admins')
+    .select('id,auth_user_id,email,full_name,phone,whatsapp,facebook_url,instagram_url,tiktok_url,telegram_url,youtube_url,linkedin_url,role,role_title,avatar_url,is_active,show_public_contact,display_order')
+    .order('display_order', { ascending: true })
+    .order('full_name', { ascending: true })) || [];
+}
+
+export async function createAdminAccount(payload) {
+  const clean = {
+    full_name: String(payload?.full_name ?? '').trim(),
+    email: String(payload?.email ?? '').trim().toLowerCase(),
+    role: payload?.role === 'vendeur' ? 'vendeur' : 'admin',
+    role_title: String(payload?.role_title ?? '').trim() || 'Conseiller Ventes',
+    phone: String(payload?.phone ?? '').trim(),
+    whatsapp: String(payload?.whatsapp ?? '').trim(),
+    facebook_url: String(payload?.facebook_url ?? '').trim(),
+    instagram_url: String(payload?.instagram_url ?? '').trim(),
+    tiktok_url: String(payload?.tiktok_url ?? '').trim(),
+    telegram_url: String(payload?.telegram_url ?? '').trim(),
+    youtube_url: String(payload?.youtube_url ?? '').trim(),
+    linkedin_url: String(payload?.linkedin_url ?? '').trim(),
+    avatar_url: String(payload?.avatar_url ?? '').trim(),
+    display_order: Number.isFinite(Number(payload?.display_order)) ? Number(payload.display_order) : 0,
+    is_active: payload?.is_active !== false,
+    show_public_contact: payload?.show_public_contact !== false,
+  };
+  if (!clean.full_name || !clean.email) throw new Error('Nom et email sont obligatoires.');
+  const { data, error } = await supabase.functions.invoke('create-admin', { body: clean });
+  if (error) throw error;
+  if (data?.error) throw new Error(data.error);
+  return data.admin;
 }
 
 export async function updateAdminAccount(id, payload) {
+  if (!id) throw new Error('Administrateur invalide.');
   const role = payload.role === 'vendeur' ? 'vendeur' : 'admin';
-  return throwIfError(await supabase.from('admins').update({ role, is_active: Boolean(payload.is_active) }).eq('id', id).select('id,auth_user_id,email,full_name,role,is_active').single());
+  const row = {
+    full_name: String(payload.full_name ?? '').trim(),
+    phone: String(payload.phone ?? '').trim() || null,
+    whatsapp: String(payload.whatsapp ?? '').trim() || null,
+    facebook_url: String(payload.facebook_url ?? '').trim() || null,
+    instagram_url: String(payload.instagram_url ?? '').trim() || null,
+    tiktok_url: String(payload.tiktok_url ?? '').trim() || null,
+    telegram_url: String(payload.telegram_url ?? '').trim() || null,
+    youtube_url: String(payload.youtube_url ?? '').trim() || null,
+    linkedin_url: String(payload.linkedin_url ?? '').trim() || null,
+    role_title: String(payload.role_title ?? '').trim() || 'Conseiller Ventes',
+    display_order: Number.isFinite(Number(payload.display_order)) ? Number(payload.display_order) : 0,
+    role,
+    is_active: Boolean(payload.is_active),
+    show_public_contact: Boolean(payload.show_public_contact),
+  };
+  if (!row.full_name) throw new Error('Le nom complet est obligatoire.');
+  return throwIfError(await supabase.from('admins').update(row).eq('id', id).select('id,auth_user_id,email,full_name,phone,whatsapp,facebook_url,instagram_url,tiktok_url,telegram_url,youtube_url,linkedin_url,role,role_title,avatar_url,is_active,show_public_contact,display_order').single());
 }
 
 export async function listProducts() {

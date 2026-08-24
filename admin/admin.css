@@ -147,3 +147,5 @@ tr:last-child td{border-bottom:none;}
 
 .action-row{display:flex;flex-wrap:wrap;gap:6px}
 @media (max-width:900px){.action-row{justify-content:flex-start}}
+.team-note code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.92em}.check-field{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink-600);margin-bottom:16px}.check-field input{accent-color:var(--orange-500);width:16px;height:16px}.modal-box .who{margin:5px 0 0;font-size:12px;color:var(--ink-400)}.modal-box .btn:disabled{opacity:.6;cursor:not-allowed}
+@media(max-width:600px){.modal-overlay{padding:18px 10px}.modal-box{padding:18px;border-radius:12px}.modal-box .form-grid{grid-template-columns:1fr}}
