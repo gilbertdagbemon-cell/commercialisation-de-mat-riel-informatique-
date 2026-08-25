@@ -6,12 +6,12 @@ async function loadHomeProducts() {
   const grid = document.getElementById('products-grid');
   if (!grid) return;
   const { data, error } = await supabase
-    .from('products')
-    .select('*, brands(name), categories(name), media(id,type,url,position,is_cover)')
-    .eq('is_published', true)
-    .order('is_featured', { ascending: false })
-    .order('created_at', { ascending: false })
-    .limit(6);
+  .from('products')
+  .select('*, brands(name), categories(name), media(id,type,url,position,is_cover)')
+  .eq('is_published', true)
+  .eq('is_featured', true)
+  .order('created_at', { ascending: false })
+  .limit(6);
   if (error) {
     console.error('Chargement produits:', error);
     grid.innerHTML = '<div class="empty-state">Impossible de charger les produits pour le moment.</div>';
@@ -35,7 +35,7 @@ async function loadHomeFilters() {
   const apply = async () => {
     const categoryId = categories?.querySelector('.chip.active')?.dataset.filterCategory || '';
     const brandId = brands?.querySelector('.chip.active')?.dataset.filterBrand || '';
-    let query = supabase.from('products').select('*, brands(name), categories(name), media(id,type,url,position,is_cover)').eq('is_published', true).order('is_featured', { ascending: false }).order('created_at', { ascending: false }).limit(12);
+    let query = supabase.from('products').select('*, brands(name), categories(name), media(id,type,url,position,is_cover)').eq('is_published', true).eq('is_featured', true).order('created_at', { ascending: false }).limit(12);
     if (categoryId) query = query.eq('category_id', categoryId);
     if (brandId) query = query.eq('brand_id', brandId);
     const { data, error } = await query;
