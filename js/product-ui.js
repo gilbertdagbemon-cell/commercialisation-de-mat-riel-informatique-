@@ -383,59 +383,137 @@ function renderReviewForm(productId) {
 function setupReviewForm(modal, productId) {
   const form = modal.querySelector('[data-product-review-form]');
   if (!form || form.dataset.bound === '1') return;
+
   form.dataset.bound = '1';
+
   let selectedRating = 0;
+
   const stars = [...form.querySelectorAll('[data-rating-value]')];
   const message = form.querySelector('[data-review-form-message]');
   const submitButton = form.querySelector('[type="submit"]');
 
+  // Champ caché qui conserve réellement la note sélectionnée
+  let ratingInput = form.querySelector('input[name="rating"]');
+
+  if (!ratingInput) {
+    ratingInput = document.createElement('input');
+    ratingInput.type = 'hidden';
+    ratingInput.name = 'rating';
+    ratingInput.value = '0';
+    form.appendChild(ratingInput);
+  }
+
   const updateStars = () => {
     stars.forEach(star => {
-      const active = Number(star.dataset.ratingValue) <= selectedRating;
+      const value = Number(star.dataset.ratingValue);
+      const active = value <= selectedRating;
+
       star.textContent = active ? '★' : '☆';
       star.classList.toggle('active', active);
-      star.setAttribute('aria-checked', String(Number(star.dataset.ratingValue) === selectedRating));
+      star.setAttribute(
+        'aria-checked',
+        String(value === selectedRating)
+      );
     });
+
+    ratingInput.value = String(selectedRating);
   };
 
+  // Sélection de la note
   stars.forEach(star => {
-    star.addEventListener('click', () => {
-      selectedRating = Number(star.dataset.ratingValue) || 0;
+    star.addEventListener('click', event => {
+      event.preventDefault();
+      event.stopPropagation();
+
+      const value = Number(star.dataset.ratingValue);
+
+      if (!Number.isInteger(value) || value < 1 || value > 5) {
+        return;
+      }
+
+      selectedRating = value;
+      ratingInput.value = String(value);
+
       updateStars();
+
+      // Supprime immédiatement un ancien message d'erreur
+      if (message) {
+        message.textContent = '';
+        message.className = 'review-form-message';
+      }
     });
   });
 
   form.addEventListener('submit', async event => {
     event.preventDefault();
-    const authorName = String(form.elements.author_name?.value || '').trim();
-    const comment = String(form.elements.comment?.value || '').trim();
+
+    const authorName = String(
+      form.elements.author_name?.value || ''
+    ).trim();
+
+    const comment = String(
+      form.elements.comment?.value || ''
+    ).trim();
+
+    const rating = Number(
+      form.elements.rating?.value || selectedRating || 0
+    );
 
     message.textContent = '';
     message.className = 'review-form-message';
 
-    if (!authorName || !selectedRating || !comment) {
-      message.textContent = 'Veuillez renseigner votre nom, choisir une note et écrire un commentaire.';
+    // Validation
+    if (!authorName || !rating || !comment) {
+      message.textContent =
+        'Veuillez renseigner votre nom, choisir une note et écrire un commentaire.';
+      message.classList.add('error');
+      return;
+    }
+
+    if (rating < 1 || rating > 5) {
+      message.textContent =
+        'Veuillez choisir une note entre 1 et 5 étoiles.';
       message.classList.add('error');
       return;
     }
 
     submitButton.disabled = true;
     submitButton.setAttribute('aria-busy', 'true');
+
     try {
-      await submitProductReview({ productId, authorName, rating: selectedRating, comment });
-      message.textContent = 'Merci ! Votre avis a été envoyé et sera visible après validation par l’équipe.';
+      await submitProductReview({
+        productId,
+        authorName,
+        rating,
+        comment
+      });
+
+      message.textContent =
+        'Merci ! Votre avis a été envoyé et sera visible après validation par l’équipe.';
       message.classList.add('success');
+
       form.reset();
+
       selectedRating = 0;
+      ratingInput.value = '0';
+
       updateStars();
-    } catch (_) {
-      message.textContent = 'Impossible d’envoyer votre avis pour le moment. Veuillez réessayer.';
+
+    } catch (error) {
+      console.error('Erreur lors de l’envoi de l’avis :', error);
+
+      message.textContent =
+        'Impossible d’envoyer votre avis pour le moment. Veuillez réessayer.';
       message.classList.add('error');
+
     } finally {
       submitButton.disabled = false;
       submitButton.removeAttribute('aria-busy');
     }
   });
+
+  // État initial
+  updateStars();
 }
 
 function setupFeaturesModal(scope = document) {
