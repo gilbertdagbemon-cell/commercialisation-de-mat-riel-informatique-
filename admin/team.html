@@ -36,14 +36,29 @@
 <div class="form-row"><label for="youtube_url">YouTube</label><input id="youtube_url" type="url" maxlength="500"></div>
 <div class="form-row"><label for="linkedin_url">LinkedIn</label><input id="linkedin_url" type="url" maxlength="500"></div>
 </div>
-<div class="form-row"><label for="avatar_url">URL de l'avatar</label><input id="avatar_url" type="url" maxlength="1000"></div>
+<div class="form-row form-row-full avatar-upload-field">
+  <label for="avatar-input">Photo de profil</label>
+  <div class="avatar-upload-box">
+    <div class="avatar-upload-preview-wrap">
+      <img id="avatar-preview" class="avatar-upload-preview" alt="Aperçu de la photo de profil" hidden>
+      <div id="avatar-placeholder" class="avatar-upload-placeholder"><i class="bx bx-user"></i></div>
+    </div>
+    <div class="avatar-upload-actions">
+      <input id="avatar-input" type="file" accept="image/jpeg,image/png,image/webp,image/gif" hidden>
+      <button type="button" class="btn btn-secondary btn-sm" id="avatar-select-btn"><i class="bx bx-image-add"></i> Choisir une photo</button>
+      <button type="button" class="btn btn-secondary btn-sm" id="avatar-clear-btn" hidden><i class="bx bx-x"></i> Retirer</button>
+      <p class="avatar-help">JPG, PNG, WEBP ou GIF — 5 Mo maximum. La photo sera automatiquement stockée dans Supabase.</p>
+      <p id="avatar-current" class="avatar-current" hidden>Une photo est déjà enregistrée. Choisissez une nouvelle image pour la remplacer.</p>
+    </div>
+  </div>
+</div>
 <div class="form-grid"><label class="check-field"><input id="is_active" type="checkbox" checked> Compte actif</label><label class="check-field"><input id="show_public_contact" type="checkbox" checked> Afficher les contacts publiquement</label></div>
 <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:10px"><button class="btn btn-secondary" id="cancel-admin" type="button">Annuler</button><button class="btn btn-primary" id="save-admin" type="submit"><i class="bx bx-user-plus"></i> Créer le compte</button></div>
 </form></div></div>
 <div class="toast" id="toast"></div>
 
 <script type="module">
-import { requireAdmin, listAdmins, createAdminAccount, updateAdminAccount } from './supabase-client.js';
+import { requireAdmin, listAdmins, createAdminAccount, updateAdminAccount, uploadAdminAvatar } from './supabase-client.js';
 import { escapeHtml, showToast, bindSignOut } from './admin-shared.js';
 
 let currentAdmin = null;
@@ -58,7 +73,58 @@ const setVal = (id, value='') => { document.getElementById(id).value = value ?? 
 const checked = id => document.getElementById(id).checked;
 const setChecked = (id, value) => { document.getElementById(id).checked = Boolean(value); };
 
-function openModal() { form.reset(); setVal('role_title','Conseiller Ventes'); setVal('display_order','0'); setChecked('is_active',true); setChecked('show_public_contact',true); modal.classList.add('open'); modal.setAttribute('aria-hidden','false'); setTimeout(()=>document.getElementById('full_name').focus(),50); }
+const avatarInput = document.getElementById('avatar-input');
+const avatarPreview = document.getElementById('avatar-preview');
+const avatarPlaceholder = document.getElementById('avatar-placeholder');
+const avatarClearBtn = document.getElementById('avatar-clear-btn');
+const avatarCurrent = document.getElementById('avatar-current');
+
+function setAvatarPreview(url = '') {
+  avatarInput.value = '';
+  if (url) {
+    avatarPreview.src = url;
+    avatarPreview.hidden = false;
+    avatarPlaceholder.hidden = true;
+    avatarClearBtn.hidden = false;
+    avatarCurrent.hidden = false;
+  } else {
+    avatarPreview.removeAttribute('src');
+    avatarPreview.hidden = true;
+    avatarPlaceholder.hidden = false;
+    avatarClearBtn.hidden = true;
+    avatarCurrent.hidden = true;
+  }
+}
+
+function resetAvatarSelection() {
+  setAvatarPreview('');
+}
+
+avatarInput.addEventListener('change', () => {
+  const file = avatarInput.files[0];
+  if (!file) return;
+  if (file.size > 5 * 1024 * 1024) {
+    avatarInput.value = '';
+    showToast('La photo ne doit pas dépasser 5 Mo.', true);
+    return;
+  }
+  if (!file.type.startsWith('image/')) {
+    avatarInput.value = '';
+    showToast('Veuillez choisir une image valide.', true);
+    return;
+  }
+  avatarPreview.src = URL.createObjectURL(file);
+  avatarPreview.hidden = false;
+  avatarPlaceholder.hidden = true;
+  avatarClearBtn.hidden = false;
+  avatarCurrent.hidden = true;
+});
+
+avatarClearBtn.addEventListener('click', () => resetAvatarSelection());
+
+document.getElementById('avatar-select-btn').addEventListener('click', () => avatarInput.click());
+
+function openModal() { form.reset(); setVal('role_title','Conseiller Ventes'); setVal('display_order','0'); resetAvatarSelection(); setChecked('is_active',true); setChecked('show_public_contact',true); modal.classList.add('open'); modal.setAttribute('aria-hidden','false'); setTimeout(()=>document.getElementById('full_name').focus(),50); }
 function closeModal() { modal.classList.remove('open'); modal.setAttribute('aria-hidden','true'); }
 
 document.getElementById('add-admin-btn').addEventListener('click', openModal);
@@ -97,12 +163,12 @@ function render() {
     const a=admins.find(x=>x.id===button.dataset.edit); if(!a)return;
     // Les comptes existants peuvent être édités dans cette version uniquement par leurs champs de profil.
     setVal('full_name',a.full_name); setVal('email',a.email); document.getElementById('email').disabled=true; 
-    setVal('role',a.role==='vendeur'?'vendeur':'admin'); setVal('role_title',a.role_title); setVal('display_order',a.display_order); setVal('phone',a.phone); setVal('whatsapp',a.whatsapp); setVal('facebook_url',a.facebook_url); setVal('instagram_url',a.instagram_url); setVal('tiktok_url',a.tiktok_url); setVal('telegram_url',a.telegram_url); setVal('youtube_url',a.youtube_url); setVal('linkedin_url',a.linkedin_url); setVal('avatar_url',a.avatar_url); setChecked('is_active',a.is_active); setChecked('show_public_contact',a.show_public_contact);
+    setVal('role',a.role==='vendeur'?'vendeur':'admin'); setVal('role_title',a.role_title); setVal('display_order',a.display_order); setVal('phone',a.phone); setVal('whatsapp',a.whatsapp); setVal('facebook_url',a.facebook_url); setVal('instagram_url',a.instagram_url); setVal('tiktok_url',a.tiktok_url); setVal('telegram_url',a.telegram_url); setVal('youtube_url',a.youtube_url); setVal('linkedin_url',a.linkedin_url); setAvatarPreview(a.avatar_url); setChecked('is_active',a.is_active); setChecked('show_public_contact',a.show_public_contact);
     form.dataset.editId=a.id; document.getElementById('admin-modal-title').textContent='Modifier l’administrateur'; document.getElementById('admin-modal-subtitle').textContent='Modifiez les informations du compte existant.'; saveBtn.innerHTML='<i class="bx bx-save"></i> Enregistrer'; modal.classList.add('open'); modal.setAttribute('aria-hidden','false');
   }));
 }
 
-function resetCreateMode(){ form.reset(); delete form.dataset.editId; document.getElementById('email').disabled=false; setVal('role_title','Conseiller Ventes'); setVal('display_order','0'); setChecked('is_active',true); setChecked('show_public_contact',true); document.getElementById('admin-modal-title').textContent='Ajouter un administrateur'; document.getElementById('admin-modal-subtitle').textContent='Un e-mail d’invitation sera envoyé. Le nouvel administrateur choisira son mot de passe.'; saveBtn.innerHTML='<i class="bx bx-user-plus"></i> Créer le compte'; }
+function resetCreateMode(){ form.reset(); delete form.dataset.editId; document.getElementById('email').disabled=false; setVal('role_title','Conseiller Ventes'); setVal('display_order','0'); resetAvatarSelection(); setChecked('is_active',true); setChecked('show_public_contact',true); document.getElementById('admin-modal-title').textContent='Ajouter un administrateur'; document.getElementById('admin-modal-subtitle').textContent='Un e-mail d’invitation sera envoyé. Le nouvel administrateur choisira son mot de passe.'; saveBtn.innerHTML='<i class="bx bx-user-plus"></i> Créer le compte'; }
 document.getElementById('add-admin-btn').addEventListener('click', resetCreateMode);
 
 form.addEventListener('submit', async e => {
@@ -110,9 +176,43 @@ form.addEventListener('submit', async e => {
   saveBtn.disabled=true;
   const editId=form.dataset.editId;
   try {
-    const payload={full_name:val('full_name'),email:val('email'),role:val('role'),role_title:val('role_title'),display_order:val('display_order'),phone:val('phone'),whatsapp:val('whatsapp'),facebook_url:val('facebook_url'),instagram_url:val('instagram_url'),tiktok_url:val('tiktok_url'),telegram_url:val('telegram_url'),youtube_url:val('youtube_url'),linkedin_url:val('linkedin_url'),avatar_url:val('avatar_url'),is_active:checked('is_active'),show_public_contact:checked('show_public_contact')};
-    if(editId){ const existing=admins.find(x=>x.id===editId); if(existing?.role==='super_admin') throw new Error('Le compte super_admin est protégé.'); const updated=await updateAdminAccount(editId,payload); const idx=admins.findIndex(x=>x.id===editId); if(idx>=0) admins[idx]=updated; showToast('Administrateur mis à jour.'); }
-    else { const created=await createAdminAccount(payload); admins.push(created); admins.sort((a,b)=>(a.display_order-b.display_order)||String(a.full_name).localeCompare(String(b.full_name),'fr')); showToast('Administrateur créé avec succès.'); }
+    const payload={full_name:val('full_name'),email:val('email'),role:val('role'),role_title:val('role_title'),display_order:val('display_order'),phone:val('phone'),whatsapp:val('whatsapp'),facebook_url:val('facebook_url'),instagram_url:val('instagram_url'),tiktok_url:val('tiktok_url'),telegram_url:val('telegram_url'),youtube_url:val('youtube_url'),linkedin_url:val('linkedin_url'),is_active:checked('is_active'),show_public_contact:checked('show_public_contact')};
+    const photoFile = document.getElementById('avatar-input').files[0] || null;
+    if(editId){
+      const existing=admins.find(x=>x.id===editId);
+      if(existing?.role==='super_admin') throw new Error('Le compte super_admin est protégé.');
+      let updated=await updateAdminAccount(editId,payload);
+      if(photoFile){
+        try {
+          const avatarUrl=await uploadAdminAvatar(editId,photoFile);
+          updated={...updated,avatar_url:avatarUrl};
+        } catch(photoError){
+          const idx=admins.findIndex(x=>x.id===editId); if(idx>=0) admins[idx]=updated;
+          render(); closeModal(); resetCreateMode();
+          showToast(`Administrateur mis à jour, mais la photo n’a pas pu être enregistrée : ${photoError?.message || 'erreur inconnue'}`,true);
+          return;
+        }
+      }
+      const idx=admins.findIndex(x=>x.id===editId); if(idx>=0) admins[idx]=updated;
+      showToast(photoFile?'Administrateur et photo mis à jour.':'Administrateur mis à jour.');
+    }
+    else {
+      const created=await createAdminAccount(payload);
+      let finalAdmin=created;
+      if(photoFile){
+        try {
+          const avatarUrl=await uploadAdminAvatar(created.id,photoFile);
+          finalAdmin={...created,avatar_url:avatarUrl};
+        } catch(photoError){
+          admins.push(created);
+          admins.sort((a,b)=>(a.display_order-b.display_order)||String(a.full_name).localeCompare(String(b.full_name),'fr'));
+          closeModal(); resetCreateMode(); render();
+          showToast(`Administrateur créé, mais la photo n’a pas pu être enregistrée : ${photoError?.message || 'erreur inconnue'}`,true);
+          return;
+        }
+      }
+      admins.push(finalAdmin); admins.sort((a,b)=>(a.display_order-b.display_order)||String(a.full_name).localeCompare(String(b.full_name),'fr')); showToast(photoFile?'Administrateur et photo créés avec succès.':'Administrateur créé avec succès.');
+    }
     closeModal(); resetCreateMode(); render();
   } catch(error) { showToast(error?.message || 'Une erreur est survenue.',true); }
   finally { saveBtn.disabled=false; }

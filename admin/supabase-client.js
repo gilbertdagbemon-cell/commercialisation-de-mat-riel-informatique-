@@ -153,9 +153,25 @@ export async function createAdminAccount(payload) {
     show_public_contact: payload?.show_public_contact !== false,
   };
   if (!clean.full_name || !clean.email) throw new Error('Nom et email sont obligatoires.');
-  const { data, error } = await supabase.functions.invoke('create-admin', { body: clean });
-  if (error) throw error;
+  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError) throw sessionError;
+  const accessToken = sessionData?.session?.access_token;
+  if (!accessToken) throw new Error('Votre session administrateur a expiré. Veuillez vous reconnecter.');
+
+  const { data, error } = await supabase.functions.invoke('create-admin', {
+    body: clean,
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      apikey: SUPABASE_ANON_KEY,
+    },
+  });
+
+  if (error) {
+    const message = data?.error || error.message || 'Impossible de contacter le service de création de compte.';
+    throw new Error(message);
+  }
   if (data?.error) throw new Error(data.error);
+  if (!data?.admin) throw new Error('La fonction a répondu sans retourner le compte créé.');
   return data.admin;
 }
 
