@@ -3,3 +3,6 @@ verify_jwt = false
 
 [functions.create-admin]
 verify_jwt = true
+
+[functions.reset-admin-password]
+verify_jwt = true

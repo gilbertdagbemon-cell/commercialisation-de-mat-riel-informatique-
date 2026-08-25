@@ -16,7 +16,7 @@
 <div class="signout"><a href="#" id="signout-link" style="display:flex;align-items:center;gap:8px;font-size:13.5px"><i class="bx bx-log-out"></i> Déconnexion</a></div></aside>
 <main class="admin-main">
 <div class="admin-topbar"><div><h1>Équipe administrateurs</h1><p class="who">Création et gestion des comptes administrateurs</p></div><button class="btn btn-primary" id="add-admin-btn" type="button"><i class="bx bx-user-plus"></i> Ajouter un administrateur</button></div>
-<div class="card"><div class="team-note">Seul le <b>super administrateur</b> peut créer, modifier ou désactiver les comptes. La création du compte Auth et son association à <code>admins</code> sont réalisées automatiquement et de façon sécurisée.</div>
+<div class="card"><div class="team-note">Seul le <b>super administrateur</b> peut créer, modifier ou désactiver les comptes. La création du compte Auth et son association à <code>admins</code> sont réalisées automatiquement et de façon sécurisée. Un mot de passe temporaire est généré à la création : il s'affiche une seule fois, à vous de le transmettre au concerné.</div>
 <div class="table-wrap"><table><thead><tr><th>Nom</th><th>Email</th><th>Rôle</th><th>Fonction</th><th>Statut</th><th>Actions</th></tr></thead><tbody id="team-rows"><tr><td colspan="6" style="text-align:center;padding:30px">Chargement…</td></tr></tbody></table></div></div>
 </main></div>
 
@@ -26,7 +26,7 @@
 <div class="form-grid">
 <div class="form-row"><label for="full_name">Nom complet *</label><input id="full_name" required maxlength="120"></div>
 <div class="form-row"><label for="email">Email *</label><input id="email" type="email" required maxlength="254" autocomplete="email"></div>
-<div class="form-row form-row-full"><div class="invite-info"><i class="bx bx-envelope"></i><span>Un e-mail d’invitation sera envoyé à cette adresse. La personne choisira elle-même son mot de passe via un lien sécurisé.</span></div></div>
+<div class="form-row form-row-full"><div class="invite-info"><i class="bx bx-shield-quarter"></i><span>Un mot de passe temporaire sera généré automatiquement et affiché une seule fois après la création. Transmettez-le vous-même au nouvel administrateur (il pourra le changer depuis « Mon profil »).</span></div></div>
 <div class="form-row"><label for="role">Rôle *</label><select id="role"><option value="admin">Admin</option><option value="vendeur">Vendeur</option></select></div>
 <div class="form-row"><label for="role_title">Fonction / titre</label><input id="role_title" value="Conseiller Ventes" maxlength="120"></div>
 <div class="form-row"><label for="display_order">Ordre d'affichage</label><input id="display_order" type="number" value="0" min="0" step="1"></div>
@@ -58,10 +58,23 @@
 <div class="form-grid"><label class="check-field"><input id="is_active" type="checkbox" checked> Compte actif</label><label class="check-field"><input id="show_public_contact" type="checkbox" checked> Afficher les contacts publiquement</label></div>
 <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:10px"><button class="btn btn-secondary" id="cancel-admin" type="button">Annuler</button><button class="btn btn-primary" id="save-admin" type="submit"><i class="bx bx-user-plus"></i> Créer le compte</button></div>
 </form></div></div>
+
+<div class="modal-overlay" id="password-modal" aria-hidden="true"><div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="password-modal-title" style="max-width:480px;">
+<div class="modal-head"><div><h2 id="password-modal-title"><i class="bx bx-key" style="color:var(--orange-500);vertical-align:-2px;"></i> Compte créé</h2><p class="who">Mot de passe temporaire — affiché une seule fois</p></div><button class="modal-close" id="password-modal-close" type="button" aria-label="Fermer"><i class="bx bx-x"></i></button></div>
+<p id="password-modal-intro" style="font-size:13px;color:var(--ink-600);line-height:1.55;margin:0 0 14px;">
+  Le compte de <strong id="password-modal-name"></strong> (<span id="password-modal-email"></span>) a été créé et est immédiatement actif. Transmettez-lui ce mot de passe temporaire par un canal sûr (WhatsApp, appel, en main propre) — il ne sera plus jamais accessible ensuite. Conseillez-lui de le changer dès sa première connexion depuis <em>Mon profil</em>.
+</p>
+<div style="display:flex;align-items:center;gap:8px;background:var(--blue-050);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:16px;">
+  <code id="password-modal-value" style="flex:1;font:600 15px ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.02em;word-break:break-all;color:var(--ink-900);"></code>
+  <button type="button" class="btn btn-secondary btn-sm" id="password-copy-btn" title="Copier"><i class="bx bx-copy"></i></button>
+</div>
+<div style="display:flex;justify-content:flex-end;"><button type="button" class="btn btn-primary" id="password-modal-done">J'ai transmis ce mot de passe</button></div>
+</div></div>
+
 <div class="toast" id="toast"></div>
 
 <script type="module">
-import { requireAdmin, listAdmins, createAdminAccount, updateAdminAccount, uploadAdminAvatar } from './supabase-client.js';
+import { requireAdmin, listAdmins, createAdminAccount, updateAdminAccount, uploadAdminAvatar, resetAdminPassword } from './supabase-client.js';
 import { escapeHtml, showToast, bindSignOut } from './admin-shared.js';
 
 let currentAdmin = null;
@@ -130,11 +143,39 @@ document.getElementById('avatar-select-btn').addEventListener('click', () => ava
 function openModal() { form.reset(); setVal('role_title','Conseiller Ventes'); setVal('display_order','0'); resetAvatarSelection(); setChecked('is_active',true); setChecked('show_public_contact',true); modal.classList.add('open'); modal.setAttribute('aria-hidden','false'); setTimeout(()=>document.getElementById('full_name').focus(),50); }
 function closeModal() { modal.classList.remove('open'); modal.setAttribute('aria-hidden','true'); }
 
+const passwordModal = document.getElementById('password-modal');
+function openPasswordModal(admin, temporaryPassword, mode = 'created') {
+  document.getElementById('password-modal-name').textContent = admin.full_name || '—';
+  document.getElementById('password-modal-email').textContent = admin.email || '—';
+  document.getElementById('password-modal-value').textContent = temporaryPassword;
+  document.getElementById('password-modal-title').innerHTML = mode === 'reset'
+    ? '<i class="bx bx-key" style="color:var(--orange-500);vertical-align:-2px;"></i> Mot de passe régénéré'
+    : '<i class="bx bx-key" style="color:var(--orange-500);vertical-align:-2px;"></i> Compte créé';
+  document.getElementById('password-modal-intro').innerHTML = mode === 'reset'
+    ? `Un nouveau mot de passe temporaire a été généré pour <strong>${escapeHtml(admin.full_name || '—')}</strong> (${escapeHtml(admin.email || '—')}). L’ancien mot de passe ne fonctionne plus. Transmettez-lui ce mot de passe par un canal sûr (WhatsApp, appel, en main propre) — il ne sera plus jamais accessible ensuite.`
+    : `Le compte de <strong>${escapeHtml(admin.full_name || '—')}</strong> (${escapeHtml(admin.email || '—')}) a été créé et est immédiatement actif. Transmettez-lui ce mot de passe temporaire par un canal sûr (WhatsApp, appel, en main propre) — il ne sera plus jamais accessible ensuite. Conseillez-lui de le changer dès sa première connexion depuis <em>Mon profil</em>.`;
+  passwordModal.classList.add('open'); passwordModal.setAttribute('aria-hidden','false');
+}
+function closePasswordModal() { passwordModal.classList.remove('open'); passwordModal.setAttribute('aria-hidden','true'); document.getElementById('password-modal-value').textContent=''; }
+document.getElementById('password-modal-close').addEventListener('click', closePasswordModal);
+document.getElementById('password-modal-done').addEventListener('click', closePasswordModal);
+passwordModal.addEventListener('click', e => { if(e.target === passwordModal) closePasswordModal(); });
+document.getElementById('password-copy-btn').addEventListener('click', async () => {
+  const value = document.getElementById('password-modal-value').textContent;
+  if (!value) return;
+  try { await navigator.clipboard.writeText(value); showToast('Mot de passe copié.'); }
+  catch { showToast('Copie impossible, sélectionnez le texte manuellement.', true); }
+});
+
 document.getElementById('add-admin-btn').addEventListener('click', openModal);
 document.getElementById('modal-close').addEventListener('click', closeModal);
 document.getElementById('cancel-admin').addEventListener('click', closeModal);
 modal.addEventListener('click', e => { if(e.target === modal) closeModal(); });
-document.addEventListener('keydown', e => { if(e.key === 'Escape' && modal.classList.contains('open')) closeModal(); });
+document.addEventListener('keydown', e => {
+  if(e.key !== 'Escape') return;
+  if(passwordModal.classList.contains('open')) closePasswordModal();
+  else if(modal.classList.contains('open')) closeModal();
+});
 
 function render() {
   rows.innerHTML = admins.map(a => {
@@ -146,7 +187,7 @@ function render() {
       <td data-label="Rôle"><select data-role="${a.id}" ${locked?'disabled':''}><option value="admin" ${a.role==='admin'?'selected':''}>Admin</option><option value="vendeur" ${a.role==='vendeur'?'selected':''}>Vendeur</option>${a.role==='super_admin'?'<option value="super_admin" selected>Super admin</option>':''}</select></td>
       <td data-label="Fonction">${escapeHtml(a.role_title || 'Conseiller Ventes')}</td>
       <td data-label="Statut"><span class="badge ${a.is_active?'ok':'off'}">${a.is_active?'Actif':'Inactif'}</span></td>
-      <td data-label="Actions"><div class="action-row"><button type="button" class="btn btn-secondary btn-sm" data-edit="${a.id}" ${locked?'disabled':''}>Modifier</button><button type="button" class="btn ${a.is_active?'btn-danger':'btn-primary'} btn-sm" data-toggle="${a.id}" ${locked?'disabled':''}>${a.is_active?'Désactiver':'Réactiver'}</button></div></td>
+      <td data-label="Actions"><div class="action-row"><button type="button" class="btn btn-secondary btn-sm" data-edit="${a.id}" ${locked?'disabled':''}>Modifier</button><button type="button" class="btn btn-secondary btn-sm" data-reset-password="${a.id}" ${locked?'disabled':''} title="Générer un nouveau mot de passe temporaire"><i class="bx bx-key"></i></button><button type="button" class="btn ${a.is_active?'btn-danger':'btn-primary'} btn-sm" data-toggle="${a.id}" ${locked?'disabled':''}>${a.is_active?'Désactiver':'Réactiver'}</button></div></td>
     </tr>`;
   }).join('') || '<tr><td colspan="6" style="text-align:center;padding:30px">Aucun administrateur.</td></tr>';
 
@@ -162,6 +203,16 @@ function render() {
     try { const updated=await updateAdminAccount(a.id,{...a,is_active:!a.is_active}); Object.assign(a,updated); render(); showToast(a.is_active?'Compte réactivé.':'Compte désactivé.'); }
     catch(e){ showToast(e.message,true); }
   }));
+  rows.querySelectorAll('[data-reset-password]').forEach(button => button.addEventListener('click', async () => {
+    const a=admins.find(x=>x.id===button.dataset.resetPassword); if(!a)return;
+    if(!confirm(`Générer un nouveau mot de passe temporaire pour ${a.full_name || a.email} ? L’ancien mot de passe cessera immédiatement de fonctionner.`)) return;
+    button.disabled=true;
+    try {
+      const result = await resetAdminPassword(a.id);
+      openPasswordModal(a, result.temporary_password, 'reset');
+    } catch(e){ showToast(e.message,true); }
+    finally { button.disabled=false; }
+  }));
   rows.querySelectorAll('[data-edit]').forEach(button => button.addEventListener('click', () => {
     const a=admins.find(x=>x.id===button.dataset.edit); if(!a)return;
     // Les comptes existants peuvent être édités dans cette version uniquement par leurs champs de profil.
@@ -171,7 +222,7 @@ function render() {
   }));
 }
 
-function resetCreateMode(){ form.reset(); delete form.dataset.editId; document.getElementById('email').disabled=false; setVal('role_title','Conseiller Ventes'); setVal('display_order','0'); resetAvatarSelection(); setChecked('is_active',true); setChecked('show_public_contact',true); document.getElementById('admin-modal-title').textContent='Ajouter un administrateur'; document.getElementById('admin-modal-subtitle').textContent='Un e-mail d’invitation sera envoyé. Le nouvel administrateur choisira son mot de passe.'; saveBtn.innerHTML='<i class="bx bx-user-plus"></i> Créer le compte'; }
+function resetCreateMode(){ form.reset(); delete form.dataset.editId; document.getElementById('email').disabled=false; setVal('role_title','Conseiller Ventes'); setVal('display_order','0'); resetAvatarSelection(); setChecked('is_active',true); setChecked('show_public_contact',true); document.getElementById('admin-modal-title').textContent='Ajouter un administrateur'; document.getElementById('admin-modal-subtitle').textContent='Un mot de passe temporaire sera généré et affiché une seule fois après la création.'; saveBtn.innerHTML='<i class="bx bx-user-plus"></i> Créer le compte'; }
 document.getElementById('add-admin-btn').addEventListener('click', resetCreateMode);
 
 form.addEventListener('submit', async e => {
@@ -200,21 +251,26 @@ form.addEventListener('submit', async e => {
       showToast(photoFile?'Administrateur et photo mis à jour.':'Administrateur mis à jour.');
     }
     else {
-      const created=await createAdminAccount(payload);
+      const createdRaw=await createAdminAccount(payload);
+      const { temporary_password: temporaryPassword, ...created } = createdRaw;
       let finalAdmin=created;
       if(photoFile){
         try {
           const avatarUrl=await uploadAdminAvatar(created.id,photoFile);
           finalAdmin={...created,avatar_url:avatarUrl};
         } catch(photoError){
-          admins.push(created);
+          admins.push(finalAdmin);
           admins.sort((a,b)=>(a.display_order-b.display_order)||String(a.full_name).localeCompare(String(b.full_name),'fr'));
           closeModal(); resetCreateMode(); render();
           showToast(`Administrateur créé, mais la photo n’a pas pu être enregistrée : ${photoError?.message || 'erreur inconnue'}`,true);
+          if (temporaryPassword) openPasswordModal(finalAdmin, temporaryPassword);
           return;
         }
       }
       admins.push(finalAdmin); admins.sort((a,b)=>(a.display_order-b.display_order)||String(a.full_name).localeCompare(String(b.full_name),'fr')); showToast(photoFile?'Administrateur et photo créés avec succès.':'Administrateur créé avec succès.');
+      closeModal(); resetCreateMode(); render();
+      if (temporaryPassword) openPasswordModal(finalAdmin, temporaryPassword);
+      return;
     }
     closeModal(); resetCreateMode(); render();
   } catch(error) { showToast(error?.message || 'Une erreur est survenue.',true); }

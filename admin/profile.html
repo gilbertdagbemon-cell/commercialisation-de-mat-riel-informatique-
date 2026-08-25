@@ -61,13 +61,45 @@
         <button type="submit" class="btn btn-primary">Enregistrer</button>
       </form>
     </div>
+
+    <div class="card card-pad" style="margin-top:18px;">
+      <h2 style="font:700 16px 'Sora',sans-serif;margin:0 0 6px;">Mot de passe</h2>
+      <p style="font-size:13px;color:var(--ink-400);margin-bottom:18px;">
+        Si vous venez de recevoir un compte avec un mot de passe temporaire, changez-le maintenant. Vous pouvez aussi le mettre à jour à tout moment.
+      </p>
+      <form id="password-form">
+        <div class="form-row">
+          <label for="current-password">Mot de passe actuel</label>
+          <div style="position:relative;">
+            <input id="current-password" type="password" autocomplete="current-password" required style="padding-right:44px;">
+            <button type="button" class="password-toggle" data-toggle-for="current-password" aria-label="Afficher le mot de passe"><i class="bx bx-show"></i></button>
+          </div>
+        </div>
+        <div class="form-row">
+          <label for="new-password">Nouveau mot de passe</label>
+          <div style="position:relative;">
+            <input id="new-password" type="password" minlength="8" autocomplete="new-password" required style="padding-right:44px;">
+            <button type="button" class="password-toggle" data-toggle-for="new-password" aria-label="Afficher le mot de passe"><i class="bx bx-show"></i></button>
+          </div>
+        </div>
+        <div class="form-row">
+          <label for="new-password-confirm">Confirmer le nouveau mot de passe</label>
+          <div style="position:relative;">
+            <input id="new-password-confirm" type="password" minlength="8" autocomplete="new-password" required style="padding-right:44px;">
+            <button type="button" class="password-toggle" data-toggle-for="new-password-confirm" aria-label="Afficher le mot de passe"><i class="bx bx-show"></i></button>
+          </div>
+        </div>
+        <p style="font-size:12px;color:var(--ink-400);margin:-6px 0 16px;">Au moins 8 caractères.</p>
+        <button type="submit" class="btn btn-secondary" id="password-submit-btn"><i class="bx bx-lock-alt"></i> Changer le mot de passe</button>
+      </form>
+    </div>
   </main>
 </div>
 
 <div class="toast" id="toast"></div>
 
 <script type="module">
-import { requireAdmin, updateOwnProfile, uploadAdminAvatar } from './supabase-client.js';
+import { requireAdmin, updateOwnProfile, uploadAdminAvatar, changeOwnPassword } from './supabase-client.js';
 import { showToast, bindSignOut } from './admin-shared.js';
 
 let admin = null;
@@ -126,6 +158,37 @@ async function init() {
       });
       showToast('Profil mis à jour.');
     } catch (err) { showToast(err.message, true); }
+  });
+
+  document.querySelectorAll('.password-toggle[data-toggle-for]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const input = document.getElementById(btn.dataset.toggleFor);
+      const visible = input.type === 'text';
+      input.type = visible ? 'password' : 'text';
+      btn.innerHTML = `<i class="bx ${visible ? 'bx-show' : 'bx-hide'}"></i>`;
+      btn.setAttribute('aria-label', visible ? 'Afficher le mot de passe' : 'Masquer le mot de passe');
+    });
+  });
+
+  const passwordForm = document.getElementById('password-form');
+  const passwordSubmitBtn = document.getElementById('password-submit-btn');
+  passwordForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const currentPassword = document.getElementById('current-password').value;
+    const newPassword = document.getElementById('new-password').value;
+    const newPasswordConfirm = document.getElementById('new-password-confirm').value;
+    if (newPassword !== newPasswordConfirm) { showToast('Les deux nouveaux mots de passe ne correspondent pas.', true); return; }
+    if (newPassword === currentPassword) { showToast('Le nouveau mot de passe doit être différent de l’actuel.', true); return; }
+    passwordSubmitBtn.disabled = true;
+    try {
+      await changeOwnPassword(currentPassword, newPassword);
+      passwordForm.reset();
+      showToast('Mot de passe mis à jour.');
+    } catch (err) {
+      showToast(err.message || 'Impossible de changer le mot de passe.', true);
+    } finally {
+      passwordSubmitBtn.disabled = false;
+    }
   });
 }
 

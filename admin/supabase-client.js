@@ -54,6 +54,24 @@ export async function signOut() {
   if (error) throw error;
 }
 
+export async function changeOwnPassword(currentPassword, newPassword) {
+  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError || !session?.user?.email) throw new Error('Session expirée. Veuillez vous reconnecter.');
+  if (!newPassword || newPassword.length < 8) throw new Error('Le nouveau mot de passe doit contenir au moins 8 caractères.');
+
+  // Re-authentification obligatoire : Supabase ne demande pas l'ancien mot
+  // de passe pour updateUser(), donc on la force nous-mêmes avant de
+  // changer quoi que ce soit, par sécurité.
+  const { error: reauthError } = await supabase.auth.signInWithPassword({
+    email: session.user.email,
+    password: currentPassword,
+  });
+  if (reauthError) throw new Error('Mot de passe actuel incorrect.');
+
+  const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
+  if (updateError) throw updateError;
+}
+
 export async function listBrands() {
   return throwIfError(await supabase.from('brands').select('id,name,slug,is_active').order('name')) || [];
 }
@@ -172,7 +190,10 @@ export async function createAdminAccount(payload) {
   }
   if (data?.error) throw new Error(data.error);
   if (!data?.admin) throw new Error('La fonction a répondu sans retourner le compte créé.');
-  return data.admin;
+  // Le mot de passe temporaire n'est présent qu'une seule fois, dans cette
+  // réponse. Il n'est jamais relu ni récupérable ensuite : à afficher
+  // immédiatement au super administrateur puis à transmettre au concerné.
+  return { ...data.admin, temporary_password: data.temporary_password || null };
 }
 
 export async function updateAdminAccount(id, payload) {
@@ -343,6 +364,30 @@ export async function deleteReview(id) {
   return throwIfError(
     await supabase.from('product_reviews').delete().eq('id', id).select('id').single()
   );
+}
+
+export async function resetAdminPassword(adminId) {
+  if (!adminId) throw new Error('Administrateur invalide.');
+  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError) throw sessionError;
+  const accessToken = sessionData?.session?.access_token;
+  if (!accessToken) throw new Error('Votre session administrateur a expiré. Veuillez vous reconnecter.');
+
+  const { data, error } = await supabase.functions.invoke('reset-admin-password', {
+    body: { admin_id: adminId },
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      apikey: SUPABASE_ANON_KEY,
+    },
+  });
+
+  if (error) {
+    const message = data?.error || error.message || 'Impossible de contacter le service de réinitialisation.';
+    throw new Error(message);
+  }
+  if (data?.error) throw new Error(data.error);
+  if (!data?.temporary_password) throw new Error('La fonction a répondu sans retourner de mot de passe temporaire.');
+  return data; // { admin: {...}, temporary_password }
 }
 
 export async function updateOwnProfile(id, payload) {

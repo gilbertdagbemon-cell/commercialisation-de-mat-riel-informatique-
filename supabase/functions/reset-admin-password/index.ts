@@ -60,7 +60,6 @@ Deno.serve(async (req) => {
     }
 
     // Le client service_role reste strictement côté Edge Function.
-    // Le JWT de l'appelant est validé explicitement avec auth.getUser(jwt).
     const adminClient = createClient(supabaseUrl, serviceRoleKey, {
       auth: { persistSession: false, autoRefreshToken: false },
     });
@@ -77,7 +76,7 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (callerError) {
-      console.error('create-admin: caller lookup failed', callerError);
+      console.error('reset-admin-password: caller lookup failed', callerError);
       return json(req, { error: 'Impossible de vérifier les droits administrateur.' }, 500);
     }
 
@@ -92,83 +91,50 @@ Deno.serve(async (req) => {
       return json(req, { error: 'Données JSON invalides.' }, 400);
     }
 
-    const email = String(payload.email ?? '').trim().toLowerCase();
-    const fullName = String(payload.full_name ?? '').trim();
-    const role = payload.role === 'vendeur' ? 'vendeur' : payload.role === 'admin' ? 'admin' : '';
+    const targetAdminId = String(payload.admin_id ?? '').trim();
+    if (!targetAdminId) return json(req, { error: 'Administrateur cible manquant.' }, 400);
 
-    if (!fullName) return json(req, { error: 'Le nom complet est obligatoire.' }, 400);
-    if (!email || !/^\S+@\S+\.\S+$/.test(email)) return json(req, { error: 'Adresse email invalide.' }, 400);
-    if (!role) return json(req, { error: 'Rôle invalide. Utilisez admin ou vendeur.' }, 400);
+    const { data: targetAdmin, error: targetError } = await adminClient
+      .from('admins')
+      .select('id,auth_user_id,email,full_name,role')
+      .eq('id', targetAdminId)
+      .maybeSingle();
 
-    // Mot de passe temporaire généré côté serveur : évite toute dépendance
-    // à l'envoi d'un e-mail d'invitation (inviteUserByEmail) via SMTP.
-    // Le compte est créé et confirmé immédiatement (email_confirm: true) ;
-    // le mot de passe est renvoyé une seule fois dans la réponse pour que
-    // le super administrateur le transmette au nouvel administrateur, qui
-    // pourra ensuite le changer depuis son profil.
-    const temporaryPassword = generateTemporaryPassword();
+    if (targetError) {
+      console.error('reset-admin-password: target lookup failed', targetError);
+      return json(req, { error: 'Impossible de retrouver ce compte administrateur.' }, 500);
+    }
+    if (!targetAdmin) return json(req, { error: 'Administrateur introuvable.' }, 404);
 
-    const { data: createdAuth, error: createAuthError } = await adminClient.auth.admin.createUser({
-      email,
-      password: temporaryPassword,
-      email_confirm: true,
-      user_metadata: {
-        full_name: fullName,
-        role,
-        must_change_password: true,
-      },
-    });
-
-    if (createAuthError || !createdAuth.user) {
-      console.error('create-admin: createUser failed', createAuthError);
-      const message = createAuthError?.message || '';
-      const friendly = /already.*registered|already.*exists/i.test(message)
-        ? 'Un compte existe déjà avec cette adresse email.'
-        : message || 'Impossible de créer le compte utilisateur.';
-      return json(req, { error: friendly }, 400);
+    // Un super_admin ne peut pas réinitialiser le mot de passe d'un autre
+    // super_admin par ce canal (protection contre la prise de contrôle
+    // croisée entre comptes de plus haut niveau).
+    if (targetAdmin.role === 'super_admin' && targetAdmin.auth_user_id !== userData.user.id) {
+      return json(req, { error: 'Impossible de réinitialiser le mot de passe d’un autre super administrateur.' }, 403);
     }
 
-    const authUserId = createdAuth.user.id;
-    const row = {
-      auth_user_id: authUserId,
-      full_name: fullName,
-      email,
-      phone: String(payload.phone ?? '').trim() || null,
-      whatsapp: String(payload.whatsapp ?? '').trim() || null,
-      facebook_url: String(payload.facebook_url ?? '').trim() || null,
-      instagram_url: String(payload.instagram_url ?? '').trim() || null,
-      tiktok_url: String(payload.tiktok_url ?? '').trim() || null,
-      telegram_url: String(payload.telegram_url ?? '').trim() || null,
-      youtube_url: String(payload.youtube_url ?? '').trim() || null,
-      linkedin_url: String(payload.linkedin_url ?? '').trim() || null,
-      role_title: String(payload.role_title ?? '').trim() || 'Conseiller Ventes',
-      display_order: Number.isFinite(Number(payload.display_order)) ? Number(payload.display_order) : 0,
-      role,
-      is_active: payload.is_active !== false,
-      show_public_contact: payload.show_public_contact !== false,
-      avatar_url: String(payload.avatar_url ?? '').trim() || null,
-    };
+    const temporaryPassword = generateTemporaryPassword();
 
-    const { data: adminRow, error: insertError } = await adminClient
-      .from('admins')
-      .insert(row)
-      .select('id,auth_user_id,email,full_name,phone,whatsapp,facebook_url,instagram_url,tiktok_url,telegram_url,youtube_url,linkedin_url,role,role_title,avatar_url,is_active,show_public_contact,display_order')
-      .single();
+    const { error: updateError } = await adminClient.auth.admin.updateUserById(targetAdmin.auth_user_id, {
+      password: temporaryPassword,
+      email_confirm: true,
+      user_metadata: { must_change_password: true },
+    });
 
-    if (insertError || !adminRow) {
-      console.error('create-admin: admins insert failed', insertError);
-      // Rollback : ne pas laisser un utilisateur Auth orphelin si la fiche admins échoue.
-      const { error: rollbackError } = await adminClient.auth.admin.deleteUser(authUserId);
-      if (rollbackError) console.error('create-admin: rollback failed', rollbackError);
-      return json(req, { error: insertError?.message || 'Impossible de créer la fiche administrateur.' }, 400);
+    if (updateError) {
+      console.error('reset-admin-password: updateUserById failed', updateError);
+      return json(req, { error: updateError.message || 'Impossible de réinitialiser le mot de passe.' }, 400);
     }
 
     // Le mot de passe temporaire n'est renvoyé qu'ici, dans cette réponse unique.
     // Il n'est stocké nulle part (ni logs, ni base) au-delà de cet appel.
-    return json(req, { admin: adminRow, temporary_password: temporaryPassword }, 201);
+    return json(req, {
+      admin: { id: targetAdmin.id, email: targetAdmin.email, full_name: targetAdmin.full_name },
+      temporary_password: temporaryPassword,
+    }, 200);
   } catch (error) {
-    console.error('create-admin: unexpected error', error);
-    return json(req, { error: 'Erreur interne lors de la création du compte administrateur.' }, 500);
+    console.error('reset-admin-password: unexpected error', error);
+    return json(req, { error: 'Erreur interne lors de la réinitialisation du mot de passe.' }, 500);
   }
 });
 
@@ -186,7 +152,6 @@ function generateTemporaryPassword(length = 16): string {
 
   const pick = (charset: string) => charset[randomIndex(charset.length)];
 
-  // Garantit au moins un caractère de chaque catégorie.
   const required = [pick(upper), pick(lower), pick(digits), pick(symbols)];
   const remainingLength = Math.max(length - required.length, 0);
   const rest = Array.from({ length: remainingLength }, () => pick(all));
