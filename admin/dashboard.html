@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <link rel="icon" type="image/png" href="../ordimarket-logo.png">
+
+    <meta name="robots" content="noindex, nofollow">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Produits — Back-office OrdiMarket</title>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+<link rel="stylesheet" href="admin.css">
+<style>
+.description-field{width:100%;min-height:320px;resize:vertical;line-height:1.6;white-space:pre-wrap;font-family:inherit}.media-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin-top:10px}.media-thumb{position:relative;border:1px solid #e5e7eb;border-radius:10px;padding:6px;background:#fff}.media-thumb img,.media-thumb video{display:block;width:100%;height:105px;object-fit:cover;border-radius:7px;background:#f3f4f6}.media-thumb .media-actions{display:flex;gap:5px;margin-top:6px}.media-thumb button{font-size:11px}.cover-label{font-size:10px;font-weight:700;color:#1278b9}.upload-zone.dragover{border-color:#219AE9;background:#eef9ff}.upload-note{font-size:12px;color:#68707a;margin-top:6px}.pending-files{margin-top:10px;font-size:12px}.pending-file{display:flex;justify-content:space-between;gap:8px;padding:5px 0;border-bottom:1px solid #eee}</style>
+</head>
+<body>
+<div class="admin-shell">
+  <aside class="admin-side" style="display:flex;flex-direction:column;">
+    <div class="brand"><img src="../ordimarket-logo.png" alt="OrdiMarket"></div>
+    <nav class="admin-nav">
+      <a href="dashboard.html" class="active"><i class='bx bx-laptop'></i> Produits</a>
+      <a href="testimonials.html"><i class='bx bx-message-square-dots'></i> Témoignages</a>
+      <a href="profile.html"><i class='bx bx-user-circle'></i> Mon profil</a>
+      <a href="subscribers.html"><i class='bx bx-envelope'></i> Abonnés newsletter</a>
+      <a href="reviews.html"><i class='bx bx-star'></i> Avis clients</a>
+    </nav>
+    <div class="signout">
+      <a href="#" id="signout-link" style="display:flex;align-items:center;gap:8px;font-size:13.5px;"><i class='bx bx-log-out'></i> Déconnexion</a>
+    </div>
+  </aside>
+
+  <main class="admin-main">
+    <div class="admin-topbar">
+      <div>
+        <h1>Produits</h1>
+        <p class="who" id="who">Chargement…</p>
+      </div>
+      <button class="btn btn-primary" id="open-add"><i class='bx bx-plus'></i> Ajouter un produit</button>
+    </div>
+
+    <div class="dashboard-stats" id="dashboard-stats">
+      <div class="stat-card"><span>Produits publiés</span><strong id="stat-published">—</strong></div>
+      <div class="stat-card"><span>Rupture de stock</span><strong id="stat-out">—</strong></div>
+      <div class="stat-card"><span>Abonnés actifs</span><strong id="stat-subscribers">—</strong></div>
+    </div>
+    <div class="card">
+      <div class="table-toolbar"><label class="table-search"><i class="bx bx-search"></i><input id="product-search" type="search" placeholder="Rechercher par titre ou marque…" autocomplete="off"></label></div>
+      <div class="table-wrap"><table>
+        <thead>
+          <tr><th>Photo</th><th><button class="sort-header" data-sort="title">Produit <span></span></button></th><th><button class="sort-header" data-sort="brand">Marque <span></span></button></th><th><button class="sort-header" data-sort="price">Prix <span></span></button></th><th><button class="sort-header" data-sort="stock">Stock <span></span></button></th><th>Statut</th><th></th></tr>
+        </thead>
+        <tbody id="product-rows">
+          <tr><td colspan="7" style="text-align:center;color:var(--ink-400);padding:30px;">Chargement des produits…</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+  </main>
+</div>
+
+<!-- Modal Ajout / Édition produit -->
+<div class="modal-overlay" id="product-modal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3 id="modal-title">Ajouter un produit</h3>
+      <button class="modal-close" id="close-modal">&times;</button>
+    </div>
+    <form id="product-form">
+      <input type="hidden" id="product-id">
+      <div class="form-row"><label>Titre du produit</label><input id="title" required placeholder="Ex : HP EliteBook 840 G9"></div>
+
+      <div class="form-grid">
+        <div class="form-row">
+          <label>Marque</label>
+          <div class="inline-add">
+            <select id="brand-select"></select>
+            <button type="button" class="btn btn-secondary btn-sm" id="add-brand-btn"><i class='bx bx-plus'></i></button>
+          </div>
+        </div>
+        <div class="form-row">
+          <label>Catégorie</label>
+          <div class="inline-add">
+            <select id="category-select"></select>
+            <button type="button" class="btn btn-secondary btn-sm" id="add-category-btn"><i class='bx bx-plus'></i></button>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-grid">
+        <div class="form-row"><label>Prix (FCFA)</label><input id="price" type="number" min="0" required></div>
+        <div class="form-row"><label>Stock (quantité)</label><input id="stock" type="number" min="0" value="1" required></div>
+      </div>
+
+      <div class="form-row">
+        <label>État</label>
+        <select id="condition">
+          <option value="neuf">Neuf</option>
+          <option value="quasi-neuf">Quasi-neuf</option>
+          <option value="occasion" selected>Occasion</option>
+        </select>
+      </div>
+
+      <div class="form-row">
+        <label for="description">Description / Fiche technique <span aria-hidden="true">*</span></label>
+        <textarea id="description" class="description-field" maxlength="20000" required placeholder="💻✨ Nom et présentation du PC...
+👨‍💻 Processeur : ...
+🍂 RAM : ...
+🍂 Stockage : ...
+🎮 Carte graphique : ...
+🖥️ Écran : ...
+⌨️ Clavier : ...
+🔋 Autonomie : ...
+🌐 Connectivité : ...
+💻 Système : ...
+🍂 État : ...
+🌏 Prix : ..."></textarea>
+        <small class="upload-note">Un seul champ libre : emojis, puces, espaces et sauts de ligne sont conservés à l'affichage public.</small>
+      </div>
+
+      <div class="form-row">
+        <label>Photos & vidéo du produit</label>
+        <div class="upload-zone" id="upload-zone">Cliquez ou déposez des fichiers ici (images ou vidéo de démo)</div>
+        <input type="file" id="file-input" accept="image/*,video/*" multiple hidden>
+        <div class="media-grid" id="media-preview"></div>
+        <div class="pending-files" id="pending-files"></div>
+        <div class="upload-note">Les fichiers sélectionnés sont envoyés après l’enregistrement du produit. La première image devient automatiquement la couverture si aucune couverture n’existe.</div>
+      </div>
+
+      <div class="form-row">
+        <label style="display:flex;align-items:center;gap:8px;font-weight:500;">
+          <input type="checkbox" id="is-published" checked style="width:auto;"> Publier immédiatement sur le site
+        </label>
+      </div>
+
+      <div class="form-row">
+        <label style="display:flex;align-items:center;gap:8px;font-weight:500;">
+          <input type="checkbox" id="is-featured" style="width:auto;"> Mettre ce produit en vedette sur l'accueil
+        </label>
+      </div>
+
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;">
+        <button type="button" class="btn btn-secondary" id="cancel-modal">Annuler</button>
+        <button type="submit" class="btn btn-primary" id="save-btn">Enregistrer</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="toast" id="toast" data-duration="3200"></div>
+
+<script type="module" src="dashboard.js"></script>
+  <script type="module" src="admin-nav.js"></script>
+</body>
+</html>

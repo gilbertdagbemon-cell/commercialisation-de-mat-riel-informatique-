@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <link rel="icon" type="image/png" href="ordimarket-logo.png">
+
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OrdiMarket — Équipement Informatique Certifié au Bénin</title>
+  <meta name="description" content="OrdiMarket au Bénin : découvrez des ordinateurs portables, PC gaming et équipements informatiques testés et vérifiés, avec garantie, SAV et livraison.">
+  <link rel="canonical" href="https://gilbertdagbemon-cell.github.io/commercialisation-de-mat-riel-informatique-/">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="OrdiMarket">
+  <meta property="og:title" content="OrdiMarket — Équipement Informatique Certifié au Bénin">
+  <meta property="og:description" content="Trouvez le PC portable idéal pour vos projets avec OrdiMarket : équipements testés, garantie, SAV et livraison partout au Bénin.">
+  <meta property="og:image" content="https://gilbertdagbemon-cell.github.io/commercialisation-de-mat-riel-informatique-/ordimarket-logo.png">
+  <meta property="og:url" content="https://gilbertdagbemon-cell.github.io/commercialisation-de-mat-riel-informatique-/">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://unpkg.com" crossorigin>
+  <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <header>
+    <div class="header-inner">
+      <a href="index.html" class="logo"><img src="ordimarket-logo.png" alt="OrdiMarket"></a>
+      <button class="mobile-menu-toggle" type="button" aria-label="Ouvrir le menu" aria-expanded="false"><i class='bx bx-menu'></i></button>
+      <nav>
+        <a href="index.html" class="active">Accueil</a>
+        <a href="catalogue.html">Catalogue</a>
+        <a href="#a-propos">À propos</a>
+        <a href="#temoignages">Témoignages</a>
+      </nav>
+      <div class="header-cta">
+        <a class="icon-btn" href="#" id="search-trigger" title="Rechercher"><i class='bx bx-search'></i></a>
+        <button class="theme-toggle" type="button" data-theme-toggle aria-label="Activer le mode sombre" aria-pressed="false"><i class="bx bx-moon"></i></button>
+        <a class="btn-primary" href="https://wa.me/2290198663414" target="_blank" rel="noopener"><i class='bx bxl-whatsapp'></i> Commander</a>
+      </div>
+    </div>
+  </header>
+
+  <div class="trust-strip">
+    <div class="wrap">
+      <span class="trust-item"><i class='bx bxs-award'></i> Garantie incluse</span>
+      <span class="trust-item"><i class='bx bx-headphone'></i> SAV réactif</span>
+      <span class="trust-item"><i class='bx bxs-check-shield'></i> Testé &amp; vérifié par nos experts</span>
+      <span class="trust-item"><i class='bx bxs-truck'></i> Livraison rapide partout au Bénin</span>
+    </div>
+  </div>
+
+  <section class="hero">
+    <div class="wrap hero-grid">
+      <div>
+        <span class="eyebrow"><i class='bx bxs-badge-check'></i> Équipement Informatique Certifié</span>
+        <h1>Trouvez le PC portable idéal pour <span>vos projets</span>.</h1>
+        <p>Laptops reconditionnés et neufs, composants et accessoires high-tech rigoureusement testés avec garantie.</p>
+        <div class="hero-actions">
+          <a class="btn-primary" href="catalogue.html"><i class='bx bx-store-alt'></i> Explorer les offres</a>
+          <a class="btn-ghost" href="https://wa.me/2290198663414" target="_blank" rel="noopener"><i class='bx bxl-whatsapp'></i> Parler à un vendeur</a>
+        </div>
+      </div>
+      <div class="hero-art">
+        <svg viewBox="0 0 320 220" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="60" y="20" width="200" height="130" rx="10" stroke="#FD6E05" stroke-width="6"/>
+          <rect x="80" y="42" width="160" height="86" rx="3" stroke="#1394E0" stroke-width="5"/>
+          <path d="M40 150 L280 150 L268 168 Q266 172 260 172 L60 172 Q54 172 52 168 Z" fill="#FD6E05"/>
+          <g stroke="#1394E0" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M118 70 h14 l10 34 h44 l10 -22 h-58"/>
+            <circle cx="140" cy="118" r="6" fill="#1394E0" stroke="none"/>
+            <circle cx="176" cy="118" r="6" fill="#1394E0" stroke="none"/>
+          </g>
+        </svg>
+        <div class="hero-stats">
+          <div class="hero-stat"><b>100%</b><span>Produits vérifiés</span></div>
+          <div class="hero-stat"><b>24/48h</b><span>Livraison rapide</span></div>
+          <div class="hero-stat"><b>Garantie</b><span>Sur tous nos PCs</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="wrap catalog-section">
+    <!-- Ligne 1 : Filtres catégories -->
+    <div class="chips" id="categories-chips">
+      <button class="chip active" data-category="all">Tous</button>
+    </div>
+
+    <!-- Ligne 2 : Filtres marques -->
+    <div class="brand-filter" id="brands-chips">
+      <button class="chip active" data-brand="all">Toutes les marques</button>
+    </div>
+
+    <div class="section-title">
+      <h2>Sélection du moment</h2>
+    </div>
+
+    <!-- Grille de produits & Squelettes de chargement -->
+    <div class="products-grid" id="products-grid">
+      <div class="skeleton-card"></div>
+      <div class="skeleton-card"></div>
+      <div class="skeleton-card"></div>
+    </div>
+
+    <!-- Bouton Catalogue complet centré -->
+    <div class="center-cta-wrap">
+      <a href="catalogue.html" class="btn-primary-outline">Voir le catalogue complet <i class='bx bx-right-arrow-alt'></i></a>
+    </div>
+  </section>
+
+
+  <section class="faq-section wrap" id="faq" aria-labelledby="faq-title">
+    <div class="section-title">
+      <span class="section-kicker">BESOIN D'AIDE ?</span>
+      <h2 id="faq-title">Foire aux questions</h2>
+      <p>Retrouvez rapidement les réponses aux questions les plus fréquentes.</p>
+    </div>
+    <div id="faq-list" class="faq-list" aria-live="polite"><p class="faq-loading">Chargement des réponses…</p></div>
+  </section>
+
+  <section class="vendor-picker-section wrap" aria-labelledby="vendor-picker-title">
+    <div class="vendor-picker">
+      <div>
+        <span class="section-kicker">BESOIN D'UN CONSEIL ?</span>
+        <h2 id="vendor-picker-title">Choisissez votre conseiller</h2>
+        <p>Sélectionnez un vendeur pour ouvrir directement une conversation WhatsApp.</p>
+      </div>
+      <div class="vendor-picker-controls">
+        <label for="vendor-select">Votre conseiller</label>
+        <select id="vendor-select"><option value="">Chargement des conseillers…</option></select>
+        <div id="selected-vendor" class="selected-vendor" hidden></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="wrap">
+    <div class="newsletter-cta">
+      <div>
+        <h3>Ne ratez aucun arrivage !</h3>
+        <p>Inscrivez-vous pour recevoir en avant-première nos meilleures offres de PCs portables et composants.</p>
+        <div class="newsletter-benefits">
+          <span><i class='bx bx-check'></i> Offres exclusives</span>
+          <span><i class='bx bx-check'></i> Nouveaux arrivages</span>
+          <span><i class='bx bx-check'></i> Stock limité</span>
+        </div>
+      </div>
+      <div>
+        <form class="newsletter-form" id="subscribe-form">
+          <input type="email" id="subscribe-email" placeholder="Votre adresse email..." required>
+          <button type="submit">S'inscrire</button>
+        </form>
+        <div class="newsletter-note">Pas de spam. Désinscription à tout moment.</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="why" id="a-propos">
+    <div class="wrap why-grid">
+      <div class="why-item">
+        <i class='bx bxs-shield-check'></i>
+        <h4>Matériel 100% Authentique</h4>
+        <p>Chaque machine est testée méticuleusement par nos techniciens.</p>
+      </div>
+      <div class="why-item">
+        <i class='bx bxs-truck'></i>
+        <h4>Expédition sécurisée</h4>
+        <p>Livraison rapide et sécurisée à Cotonou, Parakou et dans tout le Bénin.</p>
+      </div>
+      <div class="why-item">
+        <i class='bx bxl-whatsapp'></i>
+        <h4>Support WhatsApp Direct</h4>
+        <p>Une question ? Discutez directement avec un de nos conseillers réactifs.</p>
+      </div>
+      <div class="why-item">
+        <i class='bx bx-refresh'></i>
+        <h4>Service Après-Vente Réactif</h4>
+        <p>Une garantie solide et un accompagnement continu après votre achat.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="testi wrap" id="temoignages">
+    <div class="section-title"><h2>Avis de nos clients</h2></div>
+    <div class="testi-grid" id="testimonials-grid">
+      <!-- Injecté dynamiquement depuis Supabase -->
+    </div>
+  </section>
+
+   <!-- Modale des caractéristiques techniques -->
+  <div class="modal-backdrop" id="features-modal" aria-hidden="true">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 id="modal-product-title">Caractéristiques techniques</h3>
+        <button class="modal-close" id="close-features-modal">&times;</button>
+      </div>
+      <div class="modal-body" id="modal-product-features">
+        <!-- Texte explicatif ou liste générée -->
+      </div>
+      <section id="modal-product-reviews" class="product-reviews" hidden aria-labelledby="modal-reviews-title">
+        <div class="section-kicker">AVIS CLIENTS</div>
+        <h4 id="modal-reviews-title">Avis clients</h4>
+        <div id="modal-product-reviews-list"></div>
+      </section>
+      <div id="modal-product-review-form"></div>
+    </div>
+  </div>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <div class="footer-top">
+        <div class="footer-brand">
+          <a href="index.html" class="logo"><img src="ordimarket-logo.png" alt="OrdiMarket" class="footer-logo"></a>
+          <p>OrdiMarket Tech &amp; Media — votre référence pour le matériel informatique sélectionné et accompagné au Bénin.</p>
+        </div>
+        <div class="footer-col"><h3>À propos</h3><p>Des équipements fiables, des conseils simples et un accompagnement avant et après l'achat.</p></div>
+        <div class="footer-col"><h3>Liens rapides</h3><a href="index.html">Accueil</a><a href="catalogue.html">Catalogue complet</a><a href="#temoignages">Avis clients</a><a href="#faq">Foire aux questions (FAQ)</a></div>
+        <div class="footer-col"><h3>Newsletter</h3><p>Recevez nos nouveautés et offres directement par e-mail.</p><form class="footer-newsletter" id="footer-subscribe-form"><label class="sr-only" for="footer-subscribe-email">Votre adresse e-mail</label><input id="footer-subscribe-email" type="email" placeholder="Votre e-mail" required><button type="submit" aria-label="S'inscrire"><i class="bx bx-send"></i></button></form></div>
+      </div>
+      <div class="footer-socials" data-social-footer aria-label="Réseaux sociaux de nos vendeurs"></div>
+      <div class="footer-bottom"><span>© 2026 OrdiMarket Tech &amp; Media. Tous droits réservés.</span><span>Cotonou &amp; Parakou, Bénin</span></div>
+    </div>
+  </footer>
+
+  <script type="module" src="js/home.js"></script>
+  <script type="module" src="js/footer-socials.js"></script>
+</body>
+</html>

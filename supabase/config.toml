@@ -1,0 +1,5 @@
+[functions.notify-new-product]
+verify_jwt = false
+
+[functions.create-admin]
+verify_jwt = true

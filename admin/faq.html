@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <link rel="icon" type="image/png" href="../ordimarket-logo.png">
+
+    <meta name="robots" content="noindex, nofollow">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FAQ — Back-office OrdiMarket</title>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+<link rel="stylesheet" href="admin.css">
+</head>
+<body>
+<div class="admin-shell">
+  <aside class="admin-side" style="display:flex;flex-direction:column;">
+    <div class="brand"><img src="../ordimarket-logo.png" alt="OrdiMarket"></div>
+    <nav class="admin-nav">
+      <a href="dashboard.html"><i class='bx bx-laptop'></i> Produits</a>
+      <a href="testimonials.html"><i class='bx bx-message-square-dots'></i> Témoignages</a>
+      <a href="profile.html"><i class='bx bx-user-circle'></i> Mon profil</a>
+      <a href="subscribers.html"><i class='bx bx-envelope'></i> Abonnés newsletter</a>
+      <a href="reviews.html"><i class='bx bx-star'></i> Avis clients</a>
+      <a href="faq.html" class="active"><i class='bx bx-help-circle'></i> FAQ</a>
+    </nav>
+    <div class="signout"><a href="#" id="signout-link" style="display:flex;align-items:center;gap:8px;font-size:13.5px;"><i class='bx bx-log-out'></i> Déconnexion</a></div>
+  </aside>
+
+  <main class="admin-main">
+    <div class="admin-topbar">
+      <div><h1>Gestion des FAQ</h1><span class="who" id="count">—</span></div>
+      <button class="btn btn-primary" id="open-add"><i class='bx bx-plus'></i> Ajouter une FAQ</button>
+    </div>
+    <div class="card table-wrap">
+      <table>
+        <thead><tr><th>Question</th><th>Réponse</th><th>Ordre</th><th>Statut</th><th>Actions</th></tr></thead>
+        <tbody id="rows"><tr><td colspan="5" style="text-align:center;padding:30px;color:var(--ink-400);">Chargement…</td></tr></tbody>
+      </table>
+    </div>
+  </main>
+</div>
+
+<div class="modal-overlay" id="modal" aria-hidden="true">
+  <div class="modal-box">
+    <div class="modal-head"><h3 id="modal-title">Ajouter une FAQ</h3><button type="button" class="modal-close" id="close-modal" aria-label="Fermer">&times;</button></div>
+    <form id="form">
+      <input type="hidden" id="faq-id">
+      <div class="form-row"><label for="question">Question</label><input id="question" required maxlength="500"></div>
+      <div class="form-row"><label for="answer">Réponse</label><textarea id="answer" required maxlength="5000"></textarea></div>
+      <div class="form-grid">
+        <div class="form-row"><label for="display-order">Ordre d'affichage</label><input id="display-order" type="number" min="0" step="1" value="0"></div>
+        <div class="form-row"><label style="display:flex;align-items:center;gap:8px;font-weight:600;margin-top:25px;"><input id="is-active" type="checkbox" checked style="width:auto;"> Afficher sur le site</label></div>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px;">
+        <button type="button" class="btn btn-secondary" id="cancel">Annuler</button>
+        <button type="submit" class="btn btn-primary" id="save-btn">Enregistrer</button>
+      </div>
+    </form>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import { requireAdmin, listFaqsAdmin, createFaq, updateFaq, deleteFaq } from './supabase-client.js';
+import { escapeHtml, showToast, bindSignOut } from './admin-shared.js';
+
+let faqs = [], editingId = null;
+const rows = document.getElementById('rows');
+const modal = document.getElementById('modal');
+
+function openModal(faq = null) {
+  editingId = faq?.id || null;
+  document.getElementById('modal-title').textContent = faq ? 'Modifier la FAQ' : 'Ajouter une FAQ';
+  document.getElementById('faq-id').value = faq?.id || '';
+  document.getElementById('question').value = faq?.question || '';
+  document.getElementById('answer').value = faq?.answer || '';
+  document.getElementById('display-order').value = Number(faq?.display_order ?? 0);
+  document.getElementById('is-active').checked = faq ? Boolean(faq.is_active) : true;
+  modal.classList.add('open'); modal.setAttribute('aria-hidden','false');
+  document.getElementById('question').focus();
+}
+function closeModal() { modal.classList.remove('open'); modal.setAttribute('aria-hidden','true'); editingId = null; }
+function render() {
+  document.getElementById('count').textContent = `${faqs.length} FAQ${faqs.length > 1 ? 's' : ''}`;
+  if (!faqs.length) { rows.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:30px;color:var(--ink-400);">Aucune FAQ pour le moment.</td></tr>'; return; }
+  rows.innerHTML = faqs.map(f => `
+    <tr>
+      <td data-label="Question"><strong>${escapeHtml(f.question)}</strong></td>
+      <td data-label="Réponse" style="max-width:420px;">${escapeHtml(f.answer.slice(0,120))}${f.answer.length>120?'…':''}</td>
+      <td data-label="Ordre">${Number(f.display_order) || 0}</td>
+      <td data-label="Statut">${f.is_active ? '<span class="badge ok">Active</span>' : '<span class="badge off">Désactivée</span>'}</td>
+      <td data-label="Actions"><div class="action-row"><button type="button" class="btn btn-secondary btn-sm" data-edit="${f.id}"><i class='bx bx-edit'></i> Modifier</button><button type="button" class="btn btn-danger btn-sm" data-delete="${f.id}"><i class='bx bx-trash'></i> Supprimer</button></div></td>
+    </tr>`).join('');
+  rows.querySelectorAll('[data-edit]').forEach(b => b.addEventListener('click', () => openModal(faqs.find(f => f.id === b.dataset.edit))));
+  rows.querySelectorAll('[data-delete]').forEach(b => b.addEventListener('click', async () => {
+    const faq = faqs.find(f => f.id === b.dataset.delete); if (!faq) return;
+    if (!window.confirm(`Supprimer la FAQ « ${faq.question} » ?`)) return;
+    b.disabled = true;
+    try { await deleteFaq(faq.id); faqs = faqs.filter(f => f.id !== faq.id); render(); showToast('FAQ supprimée.'); }
+    catch (e) { b.disabled = false; showToast(e.message || 'Suppression impossible.', true); }
+  }));
+}
+async function load() {
+  rows.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:30px;color:var(--ink-400);">Chargement…</td></tr>';
+  try { faqs = await listFaqsAdmin(); render(); } catch (e) { rows.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:30px;color:var(--danger);">${escapeHtml(e.message || 'Erreur de chargement.')}</td></tr>`; }
+}
+async function submit(event) {
+  event.preventDefault();
+  const button = document.getElementById('save-btn'); button.disabled = true;
+  const payload = { question: document.getElementById('question').value, answer: document.getElementById('answer').value, display_order: Number(document.getElementById('display-order').value) || 0, is_active: document.getElementById('is-active').checked };
+  try {
+    if (editingId) { const updated = await updateFaq(editingId, payload); faqs = faqs.map(f => f.id === editingId ? updated : f); showToast('FAQ modifiée.'); }
+    else { const created = await createFaq(payload); faqs.push(created); showToast('FAQ ajoutée.'); }
+    faqs.sort((a,b) => (Number(a.display_order)||0)-(Number(b.display_order)||0) || String(a.created_at).localeCompare(String(b.created_at)));
+    closeModal(); render();
+  } catch (e) { showToast(e.message || 'Enregistrement impossible.', true); }
+  finally { button.disabled = false; }
+}
+async function init() {
+  const admin = await requireAdmin(); if (!admin) return;
+  bindSignOut();
+  document.getElementById('open-add').addEventListener('click', () => openModal());
+  document.getElementById('close-modal').addEventListener('click', closeModal);
+  document.getElementById('cancel').addEventListener('click', closeModal);
+  modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
+  document.getElementById('form').addEventListener('submit', submit);
+  await load();
+}
+init();
+</script>
+<script type="module" src="admin-nav.js"></script>
+</body>
+</html>

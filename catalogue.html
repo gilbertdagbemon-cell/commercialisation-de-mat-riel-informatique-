@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <link rel="icon" type="image/png" href="ordimarket-logo.png">
+
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Catalogue complet | OrdiMarket</title>
+  <meta name="description" content="Découvrez le catalogue OrdiMarket : ordinateurs portables, gaming, MacBook et matériel informatique au Bénin.">
+  <link rel="canonical" href="https://gilbertdagbemon-cell.github.io/commercialisation-de-mat-riel-informatique-/catalogue.html">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="OrdiMarket">
+  <meta property="og:title" content="Catalogue complet | OrdiMarket">
+  <meta property="og:description" content="Découvrez notre sélection d'ordinateurs et de matériel informatique.">
+  <meta property="og:image" content="https://gilbertdagbemon-cell.github.io/commercialisation-de-mat-riel-informatique-/ordimarket-logo.png">
+  <meta property="og:url" content="https://gilbertdagbemon-cell.github.io/commercialisation-de-mat-riel-informatique-/catalogue.html">
+  <link href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://unpkg.com" crossorigin>
+  <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="catalogue-page">
+  <header class="catalogue-header">
+    <div class="catalogue-header-inner">
+      <a href="index.html" class="catalogue-brand" aria-label="OrdiMarket — Accueil">
+        <img src="ordimarket-logo.png" alt="OrdiMarket" class="catalogue-logo">
+      </a>
+      <a href="index.html" class="back-btn" aria-label="Retour à l'accueil">
+        <i class="bx bx-left-arrow-alt" aria-hidden="true"></i><span>Accueil</span>
+      </a>
+      <div class="catalogue-heading">
+        <span class="catalogue-eyebrow">CATALOGUE ORDIMARKET</span>
+        <h1>Plongez au cœur de notre sélection informatique 💻</h1>
+      </div>
+      <button type="button" class="favorites-btn" id="favorites-toggle" aria-label="Voir mes favoris">
+        <i class="bx bxs-heart" aria-hidden="true"></i>
+        <span>Favoris</span>
+        <span class="favorites-count" id="favorites-count" hidden>0</span>
+      </button>
+    </div>
+  </header>
+
+  <main class="catalogue-main">
+    <section class="catalogue-section container" aria-labelledby="catalogue-title">
+      <div class="catalogue-section-heading">
+        <div>
+          <span class="section-kicker">TROUVEZ VOTRE MACHINE</span>
+          <h2 id="catalogue-title">Tous nos ordinateurs</h2>
+        </div>
+        <span id="catalog-result-count" class="catalog-result-count" aria-live="polite">Chargement…</span>
+      </div>
+
+      <div class="catalog-controls" aria-label="Recherche et filtres du catalogue">
+        <label class="catalog-search" for="catalog-search">
+          <i class="bx bx-search" aria-hidden="true"></i>
+          <input id="catalog-search" type="search" placeholder="Rechercher un ordinateur ou une marque…" autocomplete="off">
+        </label>
+        <label class="filter-field"><span>Marque</span><select id="catalog-brand"><option value="">Toutes les marques</option></select></label>
+        <label class="filter-field"><span>Catégorie</span><select id="catalog-category"><option value="">Toutes les catégories</option></select></label>
+        <label class="filter-field"><span>État</span><select id="catalog-condition"><option value="">Tous les états</option><option value="neuf">Neuf</option><option value="quasi-neuf">Quasi-neuf</option><option value="occasion">Occasion</option></select></label>
+        <label class="filter-field"><span>Trier</span><select id="catalog-sort"><option value="newest">Plus récents</option><option value="price-asc">Prix croissant</option><option value="price-desc">Prix décroissant</option></select></label>
+      </div>
+
+      <div class="products-grid dynamic-products" id="catalog-products" aria-live="polite"></div>
+      <div id="catalog-empty" class="dynamic-empty-state" hidden>
+        <div class="empty-icon"><i class="bx bx-laptop" aria-hidden="true"></i></div>
+        <h3>Aucun ordinateur disponible</h3>
+        <p>Essayez de modifier votre recherche ou vos filtres.</p>
+      </div>
+      <p id="catalog-error" class="dynamic-error" hidden role="alert"></p>
+      <div id="catalog-pagination" class="catalog-pagination" aria-label="Pagination du catalogue"></div>
+    </section>
+  </main>
+
+  <div id="features-modal" class="modal-backdrop" aria-hidden="true">
+    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="modal-product-title">
+      <div class="modal-header">
+        <div><span class="section-kicker">DÉTAILS</span><h3 id="modal-product-title">Caractéristiques techniques</h3></div>
+        <button type="button" class="modal-close" id="close-features-modal" aria-label="Fermer">&times;</button>
+      </div>
+      <div class="modal-body" id="modal-product-features"></div>
+      <section id="modal-product-reviews" class="product-reviews" hidden aria-labelledby="modal-reviews-title">
+        <div class="section-kicker">AVIS CLIENTS</div>
+        <h4 id="modal-reviews-title">Avis clients</h4>
+        <div id="modal-product-reviews-list"></div>
+      </section>
+      <div id="modal-product-review-form"></div>
+    </div>
+  </div>
+
+  <div class="compare-toolbar"><button type="button" class="compare-open" id="compare-open" disabled><i class="bx bx-git-compare"></i> Comparer <span id="compare-count">0</span></button><span id="compare-message" class="compare-message" hidden></span></div>
+  <div id="compare-modal" class="modal-backdrop" aria-hidden="true"><div class="modal-box compare-box" role="dialog" aria-modal="true" aria-labelledby="compare-title"><div class="modal-header"><div><span class="section-kicker">COMPARAISON</span><h3 id="compare-title">Comparer les produits</h3></div><button type="button" class="modal-close" id="close-compare-modal" aria-label="Fermer">&times;</button></div><div class="modal-body"><div id="compare-grid" class="compare-grid"></div></div></div></div>
+  <div id="favorites-modal" class="modal-backdrop" aria-hidden="true">
+    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="favorites-title">
+      <div class="modal-header">
+        <div><span class="section-kicker">MA SÉLECTION</span><h3 id="favorites-title">Mes favoris</h3></div>
+        <button type="button" class="modal-close close-favorites" aria-label="Fermer">&times;</button>
+      </div>
+      <div id="favorites-body" class="modal-body"></div>
+    </div>
+  </div>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-top">
+        <div class="footer-brand">
+          <a href="index.html" aria-label="OrdiMarket — Accueil"><img src="ordimarket-logo.png" alt="OrdiMarket" class="footer-logo"></a>
+          <p>OrdiMarket Tech &amp; Media — votre référence pour le matériel informatique sélectionné et accompagné au Bénin.</p>
+        </div>
+        <div class="footer-col">
+          <h3>À propos</h3>
+          <p>Des équipements fiables, des conseils simples et un accompagnement avant et après l'achat.</p>
+        </div>
+        <div class="footer-col">
+          <h3>Liens rapides</h3>
+          <a href="index.html">Accueil</a>
+          <a href="catalogue.html">Catalogue</a>
+          <a href="index.html#temoignages">Avis clients</a><a href="index.html#faq">Foire aux questions (FAQ)</a>
+        </div>
+        <div class="footer-col">
+          <h3>Newsletter</h3>
+          <p>Recevez nos nouveautés et offres directement par e-mail.</p>
+          <form class="footer-newsletter" id="catalog-subscribe-form">
+            <label class="sr-only" for="catalog-subscribe-email">Votre adresse e-mail</label>
+            <input id="catalog-subscribe-email" type="email" placeholder="Votre e-mail" required>
+            <button type="submit" aria-label="S'inscrire à la newsletter"><i class="bx bx-send"></i></button>
+          </form>
+        </div>
+      </div>
+      <div class="footer-socials" data-social-footer aria-label="Réseaux sociaux de nos vendeurs"></div>
+      <div class="footer-bottom"><span>© 2026 OrdiMarket Tech &amp; Media. Tous droits réservés.</span><span>Conçu au Bénin</span></div>
+    </div>
+  </footer>
+
+  <script type="module" src="js/catalog.js"></script>
+  <script type="module" src="js/footer-socials.js"></script>
+</body>
+</html>
