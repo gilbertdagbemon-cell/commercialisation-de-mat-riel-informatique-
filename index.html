@@ -180,10 +180,26 @@
     </div>
   </section>
 
-  <section class="testi wrap" id="temoignages">
-    <div class="section-title"><h2>Avis de nos clients</h2></div>
-    <div class="testi-grid" id="testimonials-grid">
-      <!-- Injecté dynamiquement depuis Supabase -->
+  <section class="testi wrap" id="temoignages" aria-labelledby="testimonials-title">
+    <div class="testi-section-header">
+      <div class="section-title">
+        <span class="testi-eyebrow">ILS NOUS FONT CONFIANCE</span>
+        <h2 id="testimonials-title">Avis de nos clients</h2>
+        <p>Découvrez les expériences de nos clients après leur achat chez OrdiMarket.</p>
+      </div>
+
+      <div class="testi-navigation" aria-label="Navigation des avis">
+        <button type="button" class="testi-nav-btn" id="testimonials-prev" aria-label="Avis précédent">
+          <i class="bx bx-chevron-left" aria-hidden="true"></i>
+        </button>
+        <button type="button" class="testi-nav-btn" id="testimonials-next" aria-label="Avis suivant">
+          <i class="bx bx-chevron-right" aria-hidden="true"></i>
+        </button>
+      </div>
+    </div>
+
+    <div class="testi-carousel" id="testimonials-grid" tabindex="0" aria-label="Témoignages clients">
+      <!-- Témoignages injectés dynamiquement depuis Supabase -->
     </div>
   </section>
 

@@ -7,6 +7,7 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 
 const BUCKET_MEDIA = STORAGE_BUCKETS.productMedia;
 const BUCKET_AVATARS = STORAGE_BUCKETS.adminAvatars;
+const BUCKET_TESTIMONIAL_AVATARS = 'testimonial-avatars';
 
 function slugify(value) {
   return String(value ?? '')
@@ -316,27 +317,174 @@ export async function deleteMedia(mediaId, url) {
 }
 
 export async function listTestimonials() {
-  return throwIfError(await supabase.from('testimonials').select('id,name,author_role,content,rating,is_published,display_order,avatar_url').order('display_order').order('created_at', { ascending: false })) || [];
+  return throwIfError(
+    await supabase
+      .from('testimonials')
+      .select(
+        'id,name,author_role,content,rating,is_published,display_order,avatar_url,verified'
+      )
+      .order('display_order', { ascending: true })
+      .order('created_at', { ascending: false })
+  ) || [];
 }
+
 
 export async function createTestimonial(payload) {
-  return throwIfError(await supabase.from('testimonials').insert({
-    name: String(payload.name || '').trim(), author_role: String(payload.author_role || '').trim() || 'Client',
-    content: String(payload.content || '').trim(), rating: Number(payload.rating) || 5,
-    is_published: Boolean(payload.is_published), created_by: payload.created_by || null,
-  }).select().single());
+
+  const name =
+    String(payload?.name || '').trim();
+
+  const authorRole =
+    String(payload?.author_role || '').trim() || 'Client';
+
+  const content =
+    String(payload?.content || '').trim();
+
+  const rating =
+    Number(payload?.rating) || 5;
+
+  const avatarUrl =
+    String(payload?.avatar_url || '').trim() || null;
+
+  const verified =
+    payload?.verified !== false;
+
+  const isPublished =
+    Boolean(payload?.is_published);
+
+
+  if (!name) {
+    throw new Error(
+      'Le nom de l’auteur est obligatoire.'
+    );
+  }
+
+  if (!content) {
+    throw new Error(
+      'L’avis est obligatoire.'
+    );
+  }
+
+  if (
+    !Number.isInteger(rating) ||
+    rating < 1 ||
+    rating > 5
+  ) {
+    throw new Error(
+      'La note doit être comprise entre 1 et 5.'
+    );
+  }
+
+
+  return throwIfError(
+    await supabase
+      .from('testimonials')
+      .insert({
+        name,
+        author_role: authorRole,
+        content,
+        rating,
+        avatar_url: avatarUrl,
+        verified,
+        is_published: isPublished,
+        created_by: payload?.created_by || null,
+      })
+      .select()
+      .single()
+  );
 }
+
 
 export async function updateTestimonial(id, payload) {
-  return throwIfError(await supabase.from('testimonials').update({
-    name: String(payload.name || '').trim(), author_role: String(payload.author_role || '').trim() || 'Client',
-    content: String(payload.content || '').trim(), rating: Number(payload.rating) || 5,
-    is_published: Boolean(payload.is_published),
-  }).eq('id', id).select().single());
+
+  if (!id) {
+    throw new Error(
+      'Témoignage invalide.'
+    );
+  }
+
+
+  const name =
+    String(payload?.name || '').trim();
+
+  const authorRole =
+    String(payload?.author_role || '').trim() || 'Client';
+
+  const content =
+    String(payload?.content || '').trim();
+
+  const rating =
+    Number(payload?.rating) || 5;
+
+  const avatarUrl =
+    String(payload?.avatar_url || '').trim() || null;
+
+  const verified =
+    payload?.verified !== false;
+
+  const isPublished =
+    Boolean(payload?.is_published);
+
+
+  if (!name) {
+    throw new Error(
+      'Le nom de l’auteur est obligatoire.'
+    );
+  }
+
+  if (!content) {
+    throw new Error(
+      'L’avis est obligatoire.'
+    );
+  }
+
+  if (
+    !Number.isInteger(rating) ||
+    rating < 1 ||
+    rating > 5
+  ) {
+    throw new Error(
+      'La note doit être comprise entre 1 et 5.'
+    );
+  }
+
+
+  return throwIfError(
+    await supabase
+      .from('testimonials')
+      .update({
+        name,
+        author_role: authorRole,
+        content,
+        rating,
+        avatar_url: avatarUrl,
+        verified,
+        is_published: isPublished,
+      })
+      .eq('id', id)
+      .select()
+      .single()
+  );
 }
 
+
 export async function deleteTestimonial(id) {
-  return throwIfError(await supabase.from('testimonials').delete().eq('id', id).select('id').single());
+
+  if (!id) {
+    throw new Error(
+      'Témoignage invalide.'
+    );
+  }
+
+
+  return throwIfError(
+    await supabase
+      .from('testimonials')
+      .delete()
+      .eq('id', id)
+      .select('id')
+      .single()
+  );
 }
 
 export async function listProductReviews() {
@@ -454,4 +602,41 @@ export async function notifyNewProduct(productId) {
   const { data, error } = await supabase.functions.invoke('notify-new-product', { body: { product_id: productId } });
   if (error) throw error;
   return data;
+}
+
+export async function uploadTestimonialAvatar(file) {
+  validateUpload(file, true);
+
+  const extension = String(file.name || '')
+    .split('.')
+    .pop()
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '') || 'jpg';
+
+  const path = `testimonials/${crypto.randomUUID()}.${extension}`;
+
+  const { error } = await supabase.storage
+    .from(BUCKET_TESTIMONIAL_AVATARS)
+    .upload(path, file, {
+      cacheControl: '3600',
+      upsert: false,
+      contentType: file.type,
+    });
+
+  if (error) throw error;
+
+  const { data } = supabase.storage
+    .from(BUCKET_TESTIMONIAL_AVATARS)
+    .getPublicUrl(path);
+
+  if (!data?.publicUrl) {
+    await supabase.storage
+      .from(BUCKET_TESTIMONIAL_AVATARS)
+      .remove([path])
+      .catch(() => {});
+
+    throw new Error('Impossible de récupérer l’URL de la photo.');
+  }
+
+  return data.publicUrl;
 }
