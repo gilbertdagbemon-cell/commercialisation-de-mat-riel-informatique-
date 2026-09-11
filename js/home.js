@@ -24,6 +24,34 @@ async function loadHomeProducts() {
 }
 
 
+function updateHomeCatalogCta({ categoryId, brandId, resultCount }) {
+  const title = document.getElementById('home-section-title');
+  const cta = document.getElementById('home-catalog-cta');
+
+  const isDefaultView = !categoryId && !brandId;
+
+  if (title) {
+    title.textContent = isDefaultView
+      ? 'Sélection du moment'
+      : 'Résultats du catalogue';
+  }
+
+  if (cta) {
+    if (isDefaultView) {
+      cta.href = 'catalogue.html';
+    } else {
+      const params = new URLSearchParams();
+      if (categoryId) params.set('category', categoryId);
+      if (brandId) params.set('brand', brandId);
+      cta.href = `catalogue.html?${params.toString()}`;
+    }
+    // Si la limite d'affichage de l'accueil (24) est atteinte, il peut
+    // y avoir d'autres résultats sur la page catalogue complète.
+    cta.hidden = false;
+  }
+}
+
+
 async function loadHomeFilters() {
   const [brandResult, categoryResult] = await Promise.all([
     supabase
@@ -73,29 +101,37 @@ async function loadHomeFilters() {
     const brandId =
       brands?.querySelector('.chip.active')?.dataset.filterBrand || '';
 
+    // Vue par défaut = "Tous" + "Toutes les marques" => on garde la
+    // sélection mise en avant (produits "featured"), comme avant.
+    const isDefaultView = !categoryId && !brandId;
+
     let query = supabase
       .from('products')
       .select('*, brands(name), categories(name), media(id,type,url,position,is_cover)')
       .eq('is_published', true)
-      .eq('is_featured', true)
-      .order('created_at', { ascending: false })
-      .limit(12);
+      .order('created_at', { ascending: false });
 
-    if (categoryId) {
-      query = query.eq('category_id', categoryId);
+    if (isDefaultView) {
+      // Comportement d'origine : uniquement la "Sélection du moment".
+      query = query.eq('is_featured', true).limit(12);
+    } else {
+      // Dès qu'un filtre précis est choisi, on interroge TOUT le
+      // catalogue (mêmes critères que catalogue.html), pas seulement
+      // les produits mis en avant sur l'accueil.
+      if (categoryId) query = query.eq('category_id', categoryId);
+      if (brandId) query = query.eq('brand_id', brandId);
+      query = query.limit(24);
     }
 
-    if (brandId) {
-      query = query.eq('brand_id', brandId);
-    }
-
-    const { data, error } = await query;
+    const { data, error, count } = await query;
 
     if (error) throw error;
 
     renderProductsGrid(data || [], '#products-grid', {
       showStock: true
     });
+
+    updateHomeCatalogCta({ categoryId, brandId, resultCount: data?.length || 0 });
   };
 
   [categories, brands].forEach(container =>
